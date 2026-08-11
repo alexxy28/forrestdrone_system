@@ -6,13 +6,25 @@ Main Idea:
 
 How it works:
 
-  (1) The drone A is monitoring constatinly, and it patrols the area searches for heat signatures that match a human. Once it's confirmed to be a human. Will have to checks id the humans is on of off trails to determine if it is lost or not. Once we can see a person in danger. 
+  (1) The drone A is monitoring constantly, and it patrols the area searches for heat signatures that match a human. Once it's confirmed to be a human, will have check if the human is on or off trails to determine if they are lost or not.
   
-  (2) The Drone A sends a signal to Drone B, and drone B will be sent closer to the location to determine if the human requires rescue or not.
+  (2) Once we can see a person is in danger Drone A sends a signal to Drone B, and drone B will be sent closer to the location to determine if the human requires rescue or not.
   
-  (3) If required then a waypoint will be send from Drone C with assistance of Drone A&B to determine the safest pathway. Drone A talks to the humans while sending of a signal to drone C. It also plays of calming music and lets them know help is on the way 
+  (3) If required then a waypoint will be sent from Drone A & B to a husky robot to determine safest route. Drone B talks to the humans while sending of a signal to husky. It also lets them know help is on the way 
+
+  (4) Drone B gets closer and decided what is needed on the site for Husky Robot to grab. Drone B has a nice look to not scare the humans. 
   
-  (4) using LIDAR to create a topographical map and will used the path way with lowest gradient for drone C (5) Drone B decided what is needed on the site. 
+  (5) Uses LIDAR to create a topographical map and will use the path way with lowest gradient for husky.
   
-  (6) Drone C comes in on the site with items such as food, first Aid, rope, and emergency blanket. 
+  (6) Husky comes in on the site with items such as food, first Aid, rope, and emergency blanket. 
+
+
+**Drone A**
+- range and has a lot of sensors
+- distance covered
+
+Drone B
+- 
+
+  
   
