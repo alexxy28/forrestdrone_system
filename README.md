@@ -5,6 +5,7 @@ Main Idea:
   Imagine you are walking in the forest, hiking up a large mountain - you can see the rain coming in but you decide to keep going. The darkness is coming in and you get lost on the path. This is where we come in - our superior innovation of saving lost hikers and animals. 
 
 How it works:
+
   (1) The drone A is monitoring constatinly, and it patrols the area searches for heat signatures that match a human. Once it's confirmed to be a human. Will have to checks id the humans is on of off trails to determine if it is lost or not. Once we can see a person in danger. 
   
   (2) The Drone A sends a signal to Drone B, and drone B will be sent closer to the location to determine if the human requires rescue or not.
