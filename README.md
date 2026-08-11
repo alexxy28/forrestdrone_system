@@ -18,7 +18,9 @@ How it works:
   
   (5) Uses LIDAR to create a topographical map and will use the path way with lowest gradient for husky.
   
+  
   (6) Husky comes in on the site with items such as food, first Aid, rope, and emergency blanket. 
+
 
   (7) Then the humans will take what they have 
 
