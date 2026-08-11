@@ -29,6 +29,12 @@ How it works:
 
 
 **Drone B**
+- drone A&B are coming together 
+
+
+
+**Drone C**
+
 
 
 Environmental impact (noise, scale) 
