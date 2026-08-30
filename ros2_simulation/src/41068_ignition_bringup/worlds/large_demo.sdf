@@ -135,107 +135,167 @@
       <pose>+9.32 12.5 2 1.570796 0 0</pose>
     </include>
 
-    <!-- Oak trees -->
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
-      </uri>
-      <name>oak1</name>
-      <pose>-4.77393 12.2995 -0.3 0 -0 0</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
-      </uri>
-      <name>oak2</name>
-      <pose>2.99444 -4.95498 -0.3 0 -0 0.8</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
-      </uri>
-      <name>oak3</name>
-      <pose>-9.12426 -11.2689 -0.3 0 -0 0.3</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
-      </uri>
-      <name>oak4</name>
-      <pose>4.21788 -1.41417 -0.3 0 -0 0.1</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
-      </uri>
-      <name>oak5</name>
-      <pose>-6.26553 5.00575 -0.3 0 -0 0.4</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
-      </uri>
-      <name>oak6</name>
-      <pose>-4.33701 1.32854 -0.3 0 -0 0</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
-      </uri>
-      <name>oak7</name>
-      <pose>-0.620372 10 -0.3 0 -0 0.5</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Oak%20tree
-      </uri>
-      <name>oak8</name>
-      <pose>3.54698 5 -0.3 0 -0 0.1</pose>
-    </include>
-    
-    <!-- Pine trees -->
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine%20tree
-      </uri>
-      <name>pine1</name>
-      <pose>6.05721 9.78933 0 0 -0 0.1</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine%20tree
-      </uri>
-      <name>pine2</name>
-      <pose>-10.0184 8.85188 0 0 -0 0.3</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine%20tree
-      </uri>
-      <name>pine3</name>
-      <pose>-4.62343 -12.5618 0 0 -0 0.2</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine%20tree
-      </uri>
-      <name>pine4</name>
-      <pose>7.08738 1.33612 0 0 -0 0</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine%20tree
-      </uri>
-      <name>pine5</name>
-      <pose>-4.64898 -3.0329 0 0 -0 0.5</pose>
-    </include>
-    <include>
-      <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Pine%20tree
-      </uri>
-      <name>pine6</name>
-      <pose>-2.27195 -8.68441 0 0 -0 0.9</pose>
-    </include>
+    <!-- Tree models: all replacements use the local demo_tree_healthy geometry so the heat sensor stays stable while keeping the original positions. -->
+    <model name="oak1">
+      <pose>-4.77393 12.2995 -0.3 0 0 0</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry><sphere><radius>0.75</radius></sphere></geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry><sphere><radius>0.75</radius></sphere></geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="oak2">
+      <pose>2.99444 -4.95498 -0.3 0 0 0.8</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="oak3">
+      <pose>-9.12426 -11.2689 -0.3 0 0 0.3</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="oak4">
+      <pose>4.21788 -1.41417 -0.3 0 0 0.1</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="oak5">
+      <pose>-6.26553 5.00575 -0.3 0 0 0.4</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="oak6">
+      <pose>-4.33701 1.32854 -0.3 0 0 0</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="oak7">
+      <pose>-0.620372 10 -0.3 0 0 0.5</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="oak8">
+      <pose>3.54698 5 -0.3 0 0 0.1</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pine1">
+      <pose>6.05721 9.78933 0 0 0 0.1</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pine2">
+      <pose>-10.0184 8.85188 0 0 0 0.3</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pine3">
+      <pose>-4.62343 -12.5618 0 0 0 0.2</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pine4">
+      <pose>7.08738 1.33612 0 0 0 0</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pine5">
+      <pose>-4.64898 -3.0329 0 0 0 0.5</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
+    <model name="pine6">
+      <pose>-2.27195 -8.68441 0 0 0 0.9</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry></collision>
+        <collision name="canopy_collision"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry></collision>
+        <visual name="trunk_visual"><pose>0 0 0.75 0 0 0</pose><geometry><cylinder><radius>0.18</radius><length>1.5</length></cylinder></geometry><material><ambient>0.35 0.20 0.08 1</ambient><diffuse>0.35 0.20 0.08 1</diffuse></material></visual>
+        <visual name="canopy_visual"><pose>0 0 1.75 0 0 0</pose><geometry><sphere><radius>0.75</radius></sphere></geometry><material><ambient>0.05 0.45 0.08 1</ambient><diffuse>0.05 0.45 0.08 1</diffuse></material></visual>
+      </link>
+    </model>
 
     <!-- Platypus -->
     <include>
@@ -306,6 +366,11 @@
       </uri>
       <name>human_heat1</name>
       <pose>-10 -10 0 0 0 0</pose>
+      <plugin
+        filename="ignition-gazebo-thermal-system"
+        name="gz::sim::systems::Thermal">
+        <temperature>315.0</temperature>
+      </plugin>
     </include>
 
     <!-- Dynamic world demo models -->
