@@ -78,7 +78,12 @@ ign gazebo --version                                # Gazebo Fortress (Ignition)
 dpkg -s ros-humble-rviz2 | grep Version             # exact rviz version
 dpkg -s ros-humble-ros-gz | grep Version            # exact ros_gz version
 ```
-
+### How to Run Project
+```bash
+colcon build --symlink-install
+source ~git/forrestdrone_system/ros2_simulation/install/setup.bash (or provided directory)
+ros2 launch 41068_ignition_bringup 41068_ignition.launch.py husky:=true rviz:=true nav2:=true
+```
 ### Likely stack for this project
 - **Core:** `rclpy`/`rclcpp`, `ros2launch`, `tf2`
 - **Simulation:** `ros_gz_sim`, `ros_gz_bridge`, `ros_gz_image`
