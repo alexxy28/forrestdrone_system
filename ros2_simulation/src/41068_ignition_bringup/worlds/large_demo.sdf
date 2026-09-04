@@ -49,91 +49,139 @@
       <pose>0 0 0 0 0 0</pose>
     </include>
 
+    
     <!-- Forest wall -->
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall1</name>
-      <pose>12.5 0 2 1.570796 0 -1.570796</pose>
+      <pose>25 0 2 1.570796 0 -1.570796</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall2</name>
-      <pose>12.5 -9.32 2 1.570796 0 -1.570796</pose>
+      <pose>25 -18.64 2 1.570796 0 -1.570796</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall3</name>
-      <pose>12.5 +9.32 2 1.570796 0 -1.570796</pose>
+      <pose>25 +18.64 2 1.570796 0 -1.570796</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall4</name>
-      <pose>-12.5 0 2 1.570796 0 1.570796</pose>
+      <pose>-25 0 2 1.570796 0 1.570796</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall5</name>
-      <pose>-12.5 -9.32 2 1.570796 0 1.570796</pose>
+      <pose>-25 -18.64 2 1.570796 0 1.570796</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall6</name>
-      <pose>-12.5 +9.32 2 1.570796 0 1.570796</pose>
+      <pose>-25 +18.64 2 1.570796 0 1.570796</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall7</name>
-      <pose>0 -12.5 2 1.570796 0 0</pose>
+      <pose>0 -25 2 1.570796 0 0</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall8</name>
-      <pose>-9.32 -12.5 2 1.570796 0 0</pose>
+      <pose>-18.64 -25 2 1.570796 0 0</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall9</name>
-      <pose>+9.32 -12.5 2 1.570796 0 0</pose>
+      <pose>+18.64 -25 2 1.570796 0 0</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall10</name>
-      <pose>0 12.5 2 1.570796 0 0</pose>
+      <pose>0 25 2 1.570796 0 0</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall11</name>
-      <pose>-9.32 12.5 2 1.570796 0 0</pose>
+      <pose>-18.64 25 2 1.570796 0 0</pose>
     </include>
     <include>
       <uri>
         model://forest_wall
       </uri>
       <name>forest_wall12</name>
-      <pose>+9.32 12.5 2 1.570796 0 0</pose>
+      <pose>+18.64 25 2 1.570796 0 0</pose>
     </include>
+    <!-- Hill Models ( Basically just rectangles and triangles for now) -->
+    <model name="hill1">
+      <pose>20 0 0 0 0 0</pose>
+      <static>true</static>
+      <link name="hill1_link">
+        <collision name="hill1_collision">
+          <pose>0 0 0.5 0 0 0</pose>
+          <geometry>
+            <box><size>10 10 1</size></box>
+          </geometry>
+        </collision>
+        <visual name="hill1_visual">
+          <pose>0 0 0.5 0 0 0</pose>
+          <geometry>
+            <box><size>10 10 1</size></box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.8 0.2 1</ambient>
+            <diffuse>0.2 0.8 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="hill2">
+      <pose>0 -10 0 0 0 0</pose>
+      <static>true</static>
+      <link name="hill2_link">
+        <collision name="hill2_collision">
+          <pose>0 -10 0.5 0 0 0</pose>
+          <geometry>
+            <box><size>30 10 1</size></box>
+          </geometry>
+        </collision>
+        <visual name="hill2_visual">
+          <pose>0 -10 0.5 0 0 0</pose>
+          <geometry>
+            <box><size>30 10 1</size></box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.8 0.2 1</ambient>
+            <diffuse>0.2 0.8 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
 
     <!-- Tree models: all replacements use the local demo_tree_healthy geometry so the heat sensor stays stable while keeping the original positions. -->
     <model name="oak1">

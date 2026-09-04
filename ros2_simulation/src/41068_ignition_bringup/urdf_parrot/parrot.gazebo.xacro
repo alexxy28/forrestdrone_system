@@ -113,7 +113,8 @@
     <turnGravityOff>true</turnGravityOff>
     <material>Gazebo/FlatBlack</material>
     <sensor type="gpu_lidar" name="lidar">
-      <pose relative_to='${prefix}base_scan'>0 0 0 0 0 0</pose>
+      <!-- Tilt lidar downwards so the drone scans the ground beneath it -->
+      <pose relative_to='${prefix}base_scan'>0 0 0 0 -1.5708 0</pose>
       <visualize>$(arg laser_visual)</visualize>
       <topic>model/${gz_model_name}/scan</topic>
       <update_rate>3</update_rate>
@@ -174,6 +175,28 @@
       <visualize>$(arg camera_visual)</visualize>
       <topic>/model/${gz_model_name}/camera</topic>
       <gz_frame_id>${prefix}camera_link</gz_frame_id>
+    </sensor>
+  </gazebo>
+
+  <!-- Thermal Camera for the Drone (attached to existing camera_link) -->
+  <gazebo reference="${prefix}camera_link">
+    <sensor type="thermal" name="thermal_camera">
+      <always_on>1</always_on>
+      <update_rate>10</update_rate>
+      <visualize>true</visualize>
+      <topic>model/${gz_model_name}/thermal_camera</topic>
+      <gz_frame_id>${prefix}camera_link</gz_frame_id>
+      <camera>
+        <horizontal_fov>2.0944</horizontal_fov>
+        <image>
+          <width>720</width>
+          <height>480</height>
+        </image>
+        <clip>
+          <near>0.1</near>
+          <far>40</far>
+        </clip>
+      </camera>
     </sensor>
   </gazebo>
 

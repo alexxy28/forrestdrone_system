@@ -47,6 +47,13 @@
   gz_type_name: "ignition.msgs.Image"
   direction: GZ_TO_ROS
 
+# Thermal camera
+- ros_topic_name: "thermal_camera"
+  gz_topic_name: "/model/parrot1/thermal_camera"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "ignition.msgs.Image"
+  direction: GZ_TO_ROS
+
 # Camera: depth
 - ros_topic_name: "camera/depth/image"
   gz_topic_name: "/model/parrot1/camera/depth_image"
