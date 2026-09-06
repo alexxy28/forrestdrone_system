@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
     if (lidar.hasData())
     {
-        const LidarData& data = lidar.getData();
+        const lidarData& data = lidar.getData();
 
         std::cout << "\nLiDAR scan received!" << std::endl;
 
@@ -37,15 +37,15 @@ int main(int argc, char* argv[])
                   << std::endl;
 
         std::cout << "Angle minimum: "
-                  << data.angle_min
+                  << data.angleMin
                   << std::endl;
 
         std::cout << "Angle maximum: "
-                  << data.angle_max
+                  << data.angleMax
                   << std::endl;
 
         std::cout << "Angle increment: "
-                  << data.angle_increment
+                  << data.angleIncrement
                   << std::endl;
 
         std::cout << "\nRanges:" << std::endl;

@@ -2,6 +2,7 @@
 #define LIDAR_HPP
 
 #include "sensor.hpp"
+#include "dataStructures.hpp"
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <memory>
 #include <vector>
@@ -11,7 +12,7 @@ class Lidar : public Sensor{
     public:
     Lidar(std::shared_ptr<rclcpp::Node> node, const std::string& topic);
 
-    bool hasData() const override;
+    bool hasData() override;
 
     const lidarData& getData() const;
 
@@ -24,7 +25,7 @@ class Lidar : public Sensor{
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription_;
 
-    LidarData data_;
+    lidarData data_;
 
     bool hasData_;
 

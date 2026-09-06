@@ -6,14 +6,14 @@
 
 class Sensor{
     public:
-    Sensor(std::shared_ptr<rclcpp::node> node)
+    Sensor(std::shared_ptr<rclcpp::node> node);
 
     virtual ~Sensor() = default;
 
     virtual bool hasData() = 0;
 
     protected:
-    std::shared_ptr<rclcpp::node> node_;
+    std::shared_ptr<rclcpp::Node> node_;
     private:
 };
 

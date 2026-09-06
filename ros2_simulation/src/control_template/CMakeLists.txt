@@ -7,9 +7,9 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 add_executable(lidar_test
-    src/main.cpp
-    src/lidar.cpp
-    src/sensor.cpp
+    main.cpp
+    lidar.cpp
+    sensor.cpp
 )
 
 ament_target_dependencies(lidar_test
@@ -18,10 +18,12 @@ ament_target_dependencies(lidar_test
 )
 
 target_include_directories(lidar_test PUBLIC
-    include
+    .
 )
 
 install(TARGETS
     lidar_test
     DESTINATION lib/${PROJECT_NAME}
 )
+
+ament_package()

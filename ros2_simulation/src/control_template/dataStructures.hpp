@@ -3,11 +3,11 @@
  
 #include <vector>
 
-struct LidarData{
+struct lidarData{
     std::vector<double> ranges;
     double angleMin;
     double angleMax;
-    double angleIncriment;
+    double angleIncrement;
 
     double rangeMin;
     double rangeMax;
