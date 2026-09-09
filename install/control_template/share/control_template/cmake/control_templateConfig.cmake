@@ -1,0 +1,1 @@
+/home/student/git/forrestdrone_system/build/control_template/ament_cmake_core/control_templateConfig.cmake

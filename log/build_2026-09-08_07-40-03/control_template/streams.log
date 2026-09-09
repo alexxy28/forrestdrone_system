@@ -1,0 +1,28 @@
+[0.057s] Invoking command in '/home/student/git/forrestdrone_system/build/control_template': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/student/git/forrestdrone_system/build/control_template -- -j8 -l8
+[0.166s] [35m[1mConsolidate compiler generated dependencies of target lidar_test[0m
+[0.239s] [ 25%] [32mBuilding CXX object CMakeFiles/lidar_test.dir/main.cpp.o[0m
+[5.692s] [ 50%] [32mBuilding CXX object CMakeFiles/lidar_test.dir/sensor.cpp.o[0m
+[11.345s] [ 75%] [32mBuilding CXX object CMakeFiles/lidar_test.dir/lidar.cpp.o[0m
+[27.252s] [100%] [32m[1mLinking CXX executable lidar_test[0m
+[27.994s] [100%] Built target lidar_test
+[28.020s] Invoked command in '/home/student/git/forrestdrone_system/build/control_template' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/student/git/forrestdrone_system/build/control_template -- -j8 -l8
+[28.021s] Invoking command in '/home/student/git/forrestdrone_system/build/control_template': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/student/git/forrestdrone_system/build/control_template
+[28.030s] -- Install configuration: ""
+[28.031s] -- Execute custom install script
+[28.032s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/lib/control_template/lidar_test
+[28.032s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/ament_index/resource_index/package_run_dependencies/control_template
+[28.032s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/ament_index/resource_index/parent_prefix_path/control_template
+[28.033s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/environment/ament_prefix_path.sh
+[28.033s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/environment/ament_prefix_path.dsv
+[28.034s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/environment/path.sh
+[28.034s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/environment/path.dsv
+[28.035s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/local_setup.bash
+[28.036s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/local_setup.sh
+[28.036s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/local_setup.zsh
+[28.036s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/local_setup.dsv
+[28.038s] -- Symlinking: /home/student/git/forrestdrone_system/install/control_template/share/control_template/package.dsv
+[28.078s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/ament_index/resource_index/packages/control_template
+[28.079s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/cmake/control_templateConfig.cmake
+[28.080s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/cmake/control_templateConfig-version.cmake
+[28.080s] -- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/package.xml
+[28.082s] Invoked command in '/home/student/git/forrestdrone_system/build/control_template' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/student/git/forrestdrone_system/build/control_template

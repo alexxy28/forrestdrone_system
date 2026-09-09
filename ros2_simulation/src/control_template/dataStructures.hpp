@@ -3,14 +3,26 @@
  
 #include <vector>
 
-struct lidarData{
-    std::vector<double> ranges;
+struct lidarInformation{
     double angleMin;
     double angleMax;
     double angleIncrement;
 
     double rangeMin;
     double rangeMax;
+};
+
+enum class SensorType
+{
+    LIDAR,
+    RGB_CAMERA,
+    THERMAL_CAMERA
+};
+
+enum class RobotType
+{
+    HUSKY,
+    PARROT
 };
 
 #endif

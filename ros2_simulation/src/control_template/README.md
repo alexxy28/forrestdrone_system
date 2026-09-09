@@ -2,7 +2,7 @@ Inheritance structure
 
 Sensor
 	->Lidar
-	->InfraRed
+	->ThermalCamera
 	->RgbCamera
  
 Robot
