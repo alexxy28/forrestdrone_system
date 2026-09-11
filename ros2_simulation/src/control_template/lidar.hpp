@@ -12,22 +12,27 @@ class Lidar : public Sensor{
     public:
     Lidar(std::shared_ptr<rclcpp::Node> node, const std::string& topic);
 
+    bool hasSensorInformation() override;
     bool hasData() override;
 
-    const lidarData& getData() const;
+    const lidarInformation& getSensorInformation() const;
+    const std::vector<double>& getData() override;
 
 
     protected:
 
     private:
-     void scanCallback(
-        const sensor_msgs::msg::LaserScan::SharedPtr msg);
+
+    void retrieveNewData(const sensor_msgs::msg::LaserScan::SharedPtr msg);
+    void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg);
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription_;
 
-    lidarData data_;
+    lidarInformation information_{};
+    std::vector<double> ranges_;
 
     bool hasData_;
+    bool hasInformation_;
 
 };
 

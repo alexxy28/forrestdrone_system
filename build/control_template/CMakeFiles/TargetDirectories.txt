@@ -1,0 +1,10 @@
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/uninstall.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/control_template_uninstall.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/lidar_test.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/test.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/edit_cache.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/rebuild_cache.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/list_install_components.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/install.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/install/local.dir
+/home/student/git/forrestdrone_system/build/control_template/CMakeFiles/install/strip.dir

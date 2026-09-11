@@ -1,5 +1,6 @@
-#include "lidar.hpp"
+#include "husky.hpp"
 
+#include <chrono>
 #include <rclcpp/rclcpp.hpp>
 #include <iostream>
 #include <memory>
@@ -12,52 +13,23 @@ int main(int argc, char* argv[])
     // Create ROS node
     auto node = std::make_shared<rclcpp::Node>("lidar_test");
 
-    // Create ONE LiDAR
-    Lidar lidar(
-        node,
-        "/husky1/scan"
-    );
+    Husky husky(node);
+    Sensor& lidar = husky.getSensor();
 
     std::cout << "Waiting for LiDAR scan..." << std::endl;
 
-    // Wait until a LiDAR message has been received
-    while (rclcpp::ok() && !lidar.hasData())
-    {
-        rclcpp::spin_some(node);
-    }
 
-    if (lidar.hasData())
-    {
-        const lidarData& data = lidar.getData();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-        std::cout << "\nLiDAR scan received!" << std::endl;
-
-        std::cout << "Number of measurements: "
-                  << data.ranges.size()
-                  << std::endl;
-
-        std::cout << "Angle minimum: "
-                  << data.angleMin
-                  << std::endl;
-
-        std::cout << "Angle maximum: "
-                  << data.angleMax
-                  << std::endl;
-
-        std::cout << "Angle increment: "
-                  << data.angleIncrement
-                  << std::endl;
-
-        std::cout << "\nRanges:" << std::endl;
-
-        for (size_t i = 0; i < data.ranges.size(); ++i)
-        {
-            std::cout << i
-                      << ": "
-                      << data.ranges[i]
-                      << " m"
-                      << std::endl;
+    for (int i = 0; i < 20; i++){
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        const auto& data = lidar.getData();
+        if (data.empty()) {
+            continue;
         }
+        double distance = data.front();
+
+        std::cout  <<  distance << std::endl;
     }
 
     rclcpp::shutdown();

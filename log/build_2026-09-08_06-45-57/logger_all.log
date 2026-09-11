@@ -1,0 +1,228 @@
+[0.255s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--symlink-install']
+[0.255s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=True, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=8, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=None, packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x7daafa85ee30>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7daafa85e830>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7daafa85e830>>, mixin_verb=('build',))
+[0.666s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.666s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.666s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.666s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.667s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.667s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.667s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/student/git/forrestdrone_system'
+[0.667s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.667s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.668s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.668s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.668s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.668s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.668s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.668s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.668s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.696s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.696s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.696s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.697s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.697s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.697s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.697s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.697s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.698s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.699s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.699s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.699s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extensions ['ignore', 'ignore_ament_install']
+[0.699s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extension 'ignore'
+[0.699s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extension 'ignore_ament_install'
+[0.703s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extensions ['colcon_pkg']
+[0.703s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extension 'colcon_pkg'
+[0.703s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extensions ['colcon_meta']
+[0.703s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extension 'colcon_meta'
+[0.703s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extensions ['ros']
+[0.704s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extension 'ros'
+[0.704s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extensions ['cmake', 'python']
+[0.704s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extension 'cmake'
+[0.704s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extension 'python'
+[0.704s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extensions ['python_setup_py']
+[0.704s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation) by extension 'python_setup_py'
+[0.704s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/build) by extensions ['ignore', 'ignore_ament_install']
+[0.705s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/build) by extension 'ignore'
+[0.705s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/build) ignored
+[0.705s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/install) by extensions ['ignore', 'ignore_ament_install']
+[0.705s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/install) by extension 'ignore'
+[0.705s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/install) ignored
+[0.706s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/log) by extensions ['ignore', 'ignore_ament_install']
+[0.706s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/log) by extension 'ignore'
+[0.706s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/log) ignored
+[0.706s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extensions ['ignore', 'ignore_ament_install']
+[0.706s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extension 'ignore'
+[0.706s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extension 'ignore_ament_install'
+[0.707s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extensions ['colcon_pkg']
+[0.707s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extension 'colcon_pkg'
+[0.707s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extensions ['colcon_meta']
+[0.707s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extension 'colcon_meta'
+[0.707s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extensions ['ros']
+[0.707s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extension 'ros'
+[0.708s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extensions ['cmake', 'python']
+[0.708s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extension 'cmake'
+[0.708s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extension 'python'
+[0.708s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extensions ['python_setup_py']
+[0.708s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src) by extension 'python_setup_py'
+[0.709s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extensions ['ignore', 'ignore_ament_install']
+[0.709s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extension 'ignore'
+[0.709s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extension 'ignore_ament_install'
+[0.709s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extensions ['colcon_pkg']
+[0.709s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extension 'colcon_pkg'
+[0.710s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extensions ['colcon_meta']
+[0.710s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extension 'colcon_meta'
+[0.710s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extensions ['ros']
+[0.710s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/41068_ignition_bringup) by extension 'ros'
+[0.721s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_simulation/src/41068_ignition_bringup' with type 'ros.ament_cmake' and name '41068_ignition_bringup'
+[0.721s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extensions ['ignore', 'ignore_ament_install']
+[0.722s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extension 'ignore'
+[0.722s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extension 'ignore_ament_install'
+[0.722s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extensions ['colcon_pkg']
+[0.722s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extension 'colcon_pkg'
+[0.722s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extensions ['colcon_meta']
+[0.722s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extension 'colcon_meta'
+[0.723s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extensions ['ros']
+[0.723s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_simulation/src/control_template) by extension 'ros'
+[0.724s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_simulation/src/control_template' with type 'ros.ament_cmake' and name 'control_template'
+[0.724s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.725s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.725s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.725s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.725s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.798s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.799s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.802s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 1 installed packages in /home/student/ros2_ws/install
+[0.805s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 427 installed packages in /opt/ros/humble
+[0.809s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.907s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'cmake_args' from command line to 'None'
+[0.907s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'cmake_target' from command line to 'None'
+[0.907s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.907s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'cmake_clean_cache' from command line to 'False'
+[0.907s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'cmake_clean_first' from command line to 'False'
+[0.907s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'cmake_force_configure' from command line to 'False'
+[0.908s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'ament_cmake_args' from command line to 'None'
+[0.908s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'catkin_cmake_args' from command line to 'None'
+[0.908s] Level 5:colcon.colcon_core.verb:set package '41068_ignition_bringup' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.908s] DEBUG:colcon.colcon_core.verb:Building package '41068_ignition_bringup' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/student/git/forrestdrone_system/build/41068_ignition_bringup', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/student/git/forrestdrone_system/install/41068_ignition_bringup', 'merge_install': False, 'path': '/home/student/git/forrestdrone_system/ros2_simulation/src/41068_ignition_bringup', 'symlink_install': True, 'test_result_base': None}
+[0.909s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'cmake_args' from command line to 'None'
+[0.909s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'cmake_target' from command line to 'None'
+[0.909s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.909s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'cmake_clean_cache' from command line to 'False'
+[0.909s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'cmake_clean_first' from command line to 'False'
+[0.909s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'cmake_force_configure' from command line to 'False'
+[0.909s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'ament_cmake_args' from command line to 'None'
+[0.910s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'catkin_cmake_args' from command line to 'None'
+[0.910s] Level 5:colcon.colcon_core.verb:set package 'control_template' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.910s] DEBUG:colcon.colcon_core.verb:Building package 'control_template' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/student/git/forrestdrone_system/build/control_template', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/student/git/forrestdrone_system/install/control_template', 'merge_install': False, 'path': '/home/student/git/forrestdrone_system/ros2_simulation/src/control_template', 'symlink_install': True, 'test_result_base': None}
+[0.910s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.913s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.913s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/student/git/forrestdrone_system/ros2_simulation/src/41068_ignition_bringup' with build type 'ament_cmake'
+[0.913s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/student/git/forrestdrone_system/ros2_simulation/src/41068_ignition_bringup'
+[0.917s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.917s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.918s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.926s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/student/git/forrestdrone_system/ros2_simulation/src/control_template' with build type 'ament_cmake'
+[0.927s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/student/git/forrestdrone_system/ros2_simulation/src/control_template'
+[0.928s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.928s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.961s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/student/git/forrestdrone_system/build/41068_ignition_bringup': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/student/git/forrestdrone_system/build/41068_ignition_bringup -- -j8 -l8
+[0.991s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/student/git/forrestdrone_system/build/control_template': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/student/git/forrestdrone_system/build/control_template -- -j8 -l8
+[1.095s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/student/git/forrestdrone_system/build/41068_ignition_bringup' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/student/git/forrestdrone_system/build/41068_ignition_bringup -- -j8 -l8
+[1.116s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/student/git/forrestdrone_system/build/41068_ignition_bringup': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/student/git/forrestdrone_system/build/41068_ignition_bringup
+[1.191s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(41068_ignition_bringup)
+[1.195s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/student/git/forrestdrone_system/build/41068_ignition_bringup' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/student/git/forrestdrone_system/build/41068_ignition_bringup
+[1.196s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup' for CMake module files
+[1.197s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup' for CMake config files
+[1.198s] Level 1:colcon.colcon_core.shell:create_environment_hook('41068_ignition_bringup', 'cmake_prefix_path')
+[1.199s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/hook/cmake_prefix_path.ps1'
+[1.200s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/hook/cmake_prefix_path.dsv'
+[1.201s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/hook/cmake_prefix_path.sh'
+[1.203s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/lib'
+[1.203s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/bin'
+[1.204s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/lib/pkgconfig/41068_ignition_bringup.pc'
+[1.204s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/lib/python3.10/site-packages'
+[1.205s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/bin'
+[1.206s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.ps1'
+[1.208s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.dsv'
+[1.209s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.sh'
+[1.210s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.bash'
+[1.211s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.zsh'
+[1.216s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/colcon-core/packages/41068_ignition_bringup)
+[1.218s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(41068_ignition_bringup)
+[1.218s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup' for CMake module files
+[1.219s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup' for CMake config files
+[1.220s] Level 1:colcon.colcon_core.shell:create_environment_hook('41068_ignition_bringup', 'cmake_prefix_path')
+[1.220s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/hook/cmake_prefix_path.ps1'
+[1.221s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/hook/cmake_prefix_path.dsv'
+[1.222s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/hook/cmake_prefix_path.sh'
+[1.226s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/lib'
+[1.226s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/bin'
+[1.226s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/lib/pkgconfig/41068_ignition_bringup.pc'
+[1.227s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/lib/python3.10/site-packages'
+[1.227s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/bin'
+[1.228s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.ps1'
+[1.232s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.dsv'
+[1.233s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.sh'
+[1.234s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.bash'
+[1.235s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/41068_ignition_bringup/package.zsh'
+[1.235s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/student/git/forrestdrone_system/install/41068_ignition_bringup/share/colcon-core/packages/41068_ignition_bringup)
+[17.973s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/student/git/forrestdrone_system/build/control_template' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/student/git/forrestdrone_system/build/control_template -- -j8 -l8
+[17.978s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/student/git/forrestdrone_system/build/control_template': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/student/git/forrestdrone_system/build/control_template
+[18.012s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(control_template)
+[18.013s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template' for CMake module files
+[18.013s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/student/git/forrestdrone_system/build/control_template' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/student/git/forrestdrone_system/build/control_template
+[18.014s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template' for CMake config files
+[18.014s] Level 1:colcon.colcon_core.shell:create_environment_hook('control_template', 'cmake_prefix_path')
+[18.015s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/student/git/forrestdrone_system/install/control_template/share/control_template/hook/cmake_prefix_path.ps1'
+[18.016s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/student/git/forrestdrone_system/install/control_template/share/control_template/hook/cmake_prefix_path.dsv'
+[18.016s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/student/git/forrestdrone_system/install/control_template/share/control_template/hook/cmake_prefix_path.sh'
+[18.018s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/lib'
+[18.018s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/bin'
+[18.018s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/lib/pkgconfig/control_template.pc'
+[18.018s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/lib/python3.10/site-packages'
+[18.019s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/bin'
+[18.020s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.ps1'
+[18.021s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.dsv'
+[18.022s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.sh'
+[18.023s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.bash'
+[18.024s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.zsh'
+[18.025s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/student/git/forrestdrone_system/install/control_template/share/colcon-core/packages/control_template)
+[18.026s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(control_template)
+[18.026s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template' for CMake module files
+[18.027s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template' for CMake config files
+[18.027s] Level 1:colcon.colcon_core.shell:create_environment_hook('control_template', 'cmake_prefix_path')
+[18.028s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/student/git/forrestdrone_system/install/control_template/share/control_template/hook/cmake_prefix_path.ps1'
+[18.029s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/student/git/forrestdrone_system/install/control_template/share/control_template/hook/cmake_prefix_path.dsv'
+[18.030s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/student/git/forrestdrone_system/install/control_template/share/control_template/hook/cmake_prefix_path.sh'
+[18.031s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/lib'
+[18.031s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/bin'
+[18.034s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/lib/pkgconfig/control_template.pc'
+[18.035s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/lib/python3.10/site-packages'
+[18.036s] Level 1:colcon.colcon_core.environment:checking '/home/student/git/forrestdrone_system/install/control_template/bin'
+[18.037s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.ps1'
+[18.041s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.dsv'
+[18.045s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.sh'
+[18.047s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.bash'
+[18.048s] INFO:colcon.colcon_core.shell:Creating package script '/home/student/git/forrestdrone_system/install/control_template/share/control_template/package.zsh'
+[18.052s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/student/git/forrestdrone_system/install/control_template/share/colcon-core/packages/control_template)
+[18.052s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[18.053s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[18.053s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[18.054s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[18.064s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[18.065s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[18.065s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[18.101s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[18.102s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/student/git/forrestdrone_system/install/local_setup.ps1'
+[18.106s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/student/git/forrestdrone_system/install/_local_setup_util_ps1.py'
+[18.109s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/student/git/forrestdrone_system/install/setup.ps1'
+[18.111s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/student/git/forrestdrone_system/install/local_setup.sh'
+[18.112s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/student/git/forrestdrone_system/install/_local_setup_util_sh.py'
+[18.113s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/student/git/forrestdrone_system/install/setup.sh'
+[18.116s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/student/git/forrestdrone_system/install/local_setup.bash'
+[18.117s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/student/git/forrestdrone_system/install/setup.bash'
+[18.118s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/student/git/forrestdrone_system/install/local_setup.zsh'
+[18.119s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/student/git/forrestdrone_system/install/setup.zsh'

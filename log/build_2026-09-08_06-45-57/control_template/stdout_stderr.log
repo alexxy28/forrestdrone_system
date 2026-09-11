@@ -1,0 +1,22 @@
+[35m[1mConsolidate compiler generated dependencies of target lidar_test[0m
+[ 25%] [32mBuilding CXX object CMakeFiles/lidar_test.dir/lidar.cpp.o[0m
+[ 50%] [32m[1mLinking CXX executable lidar_test[0m
+[100%] Built target lidar_test
+-- Install configuration: ""
+-- Execute custom install script
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/lib/control_template/lidar_test
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/ament_index/resource_index/package_run_dependencies/control_template
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/ament_index/resource_index/parent_prefix_path/control_template
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/environment/ament_prefix_path.sh
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/environment/ament_prefix_path.dsv
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/environment/path.sh
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/environment/path.dsv
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/local_setup.bash
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/local_setup.sh
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/local_setup.zsh
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/local_setup.dsv
+-- Symlinking: /home/student/git/forrestdrone_system/install/control_template/share/control_template/package.dsv
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/ament_index/resource_index/packages/control_template
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/cmake/control_templateConfig.cmake
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/cmake/control_templateConfig-version.cmake
+-- Up-to-date symlink: /home/student/git/forrestdrone_system/install/control_template/share/control_template/package.xml

@@ -3,7 +3,7 @@
 #include <functional>
 
 Lidar::Lidar(std::shared_ptr<rclcpp::Node> node, const std::string& topic)
-    : Sensor(node), hasData_(false)
+    : Sensor(node, SensorType::LIDAR), hasData_(false), hasInformation_(false)
 {
     subscription_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
         topic,
@@ -11,17 +11,33 @@ Lidar::Lidar(std::shared_ptr<rclcpp::Node> node, const std::string& topic)
         std::bind(&Lidar::scanCallback, this, std::placeholders::_1));
 }
 
-void Lidar::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg){
-    data_.ranges.assign(msg->ranges.begin(), msg->ranges.end());
+void Lidar::scanCallback(
+    const sensor_msgs::msg::LaserScan::SharedPtr msg)
+{
+    retrieveNewData(msg);
+}
 
-    data_.angleMin = msg->angle_min;
-    data_.angleMax = msg->angle_max;
-    data_.angleIncrement = msg->angle_increment;
+void Lidar::retrieveNewData(
+    const sensor_msgs::msg::LaserScan::SharedPtr msg)
+{
+    if (!hasInformation_)
+    {
+        information_.angleMin = msg->angle_min;
+        information_.angleMax = msg->angle_max;
+        information_.angleIncrement = msg->angle_increment;
 
-    data_.rangeMin = msg->range_min;
-    data_.rangeMax = msg->range_max;
+        information_.rangeMin = msg->range_min;
+        information_.rangeMax = msg->range_max;
+        hasInformation_ = true;
+    }
 
+    ranges_.assign(msg->ranges.begin(), msg->ranges.end());
     hasData_ = true;
+}
+
+bool Lidar::hasSensorInformation()
+{
+    return hasInformation_;
 }
 
 bool Lidar::hasData()
@@ -29,7 +45,13 @@ bool Lidar::hasData()
     return hasData_;
 }
 
-const lidarData& Lidar::getData() const
+const lidarInformation& Lidar::getSensorInformation() const
 {
-    return data_;
+    return information_;
+}
+
+const std::vector<double>& Lidar::getData()
+{
+    rclcpp::spin_some(node_);
+    return ranges_;
 }

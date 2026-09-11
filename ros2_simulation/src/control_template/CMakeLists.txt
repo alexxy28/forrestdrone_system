@@ -10,6 +10,8 @@ add_executable(lidar_test
     main.cpp
     lidar.cpp
     sensor.cpp
+    robot.cpp
+    husky.cpp
 )
 
 ament_target_dependencies(lidar_test
