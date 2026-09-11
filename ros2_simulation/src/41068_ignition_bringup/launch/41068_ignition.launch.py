@@ -273,9 +273,23 @@ def generate_launch_description():
         'world',
         default_value='simple_trees',
         description='Which world to load',
-        choices=['simple_trees', 'large_demo'],
+        choices=['simple_trees', 'large_demo', 'terrain_demo'],
     )
     ld.add_action(world_launch_arg)
+
+    model_path = PathJoinSubstitution([
+        FindPackageShare('41068_ignition_bringup'),
+        'models',
+    ])
+
+    ld.add_action(SetEnvironmentVariable(
+        name='IGN_GAZEBO_RESOURCE_PATH',
+        value=model_path,
+    ))
+    ld.add_action(SetEnvironmentVariable(
+        name='GZ_SIM_RESOURCE_PATH',
+        value=model_path,
+    ))
 
     # Load common Gazebo server systems from a shared config file. This keeps
     # required systems such as Sensors out of individual robot and world files,

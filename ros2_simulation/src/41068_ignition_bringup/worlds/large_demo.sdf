@@ -166,13 +166,13 @@
         <collision name="hill2_collision">
           <pose>0 -10 0.5 0 0 0</pose>
           <geometry>
-            <box><size>30 10 1</size></box>
+            <box><size>50 10 1</size></box>
           </geometry>
         </collision>
         <visual name="hill2_visual">
           <pose>0 -10 0.5 0 0 0</pose>
           <geometry>
-            <box><size>30 10 1</size></box>
+            <box><size>50 10 1</size></box>
           </geometry>
           <material>
             <ambient>0.2 0.8 0.2 1</ambient>
