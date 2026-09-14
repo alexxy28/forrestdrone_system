@@ -1,4 +1,0 @@
-Invoking command in '/home/student/git/forrestdrone_system/build/control_template': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/student/git/forrestdrone_system/build/control_template -- -j8 -l8
-Invoked command in '/home/student/git/forrestdrone_system/build/control_template' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/student/git/forrestdrone_system/build/control_template -- -j8 -l8
-Invoking command in '/home/student/git/forrestdrone_system/build/control_template': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/student/git/forrestdrone_system/build/control_template
-Invoked command in '/home/student/git/forrestdrone_system/build/control_template' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/student/git/forrestdrone_system/build/control_template

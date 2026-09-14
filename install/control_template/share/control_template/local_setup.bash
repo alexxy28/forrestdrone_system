@@ -1,1 +1,0 @@
-/home/student/git/forrestdrone_system/build/control_template/ament_cmake_environment_hooks/local_setup.bash
