@@ -1,3 +1,6 @@
+EVERYTHING REMEMBER TO ADD THE RUN LAUNCH LINE AT THE TOP OF THE FILE 
+NEW MEETING 22 SEPT
+
 Ben> Simulation and added trees, mountains 
 Pri> husky movement, no sensor yet 
 Alex1> heat sensor 
@@ -9,7 +12,7 @@ Ben > work on UI? show basic termal camera, hum
 Alex1> termal camera - add laser?
 Alex2> keep working on LIDAR!!!!!!!
 Pri> working on human detection
-eva> 
+eva> LIDAR 
 
 What we need for C3 
 obstacle detection in lidar 
