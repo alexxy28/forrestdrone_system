@@ -81,8 +81,8 @@ dpkg -s ros-humble-ros-gz | grep Version            # exact ros_gz version
 ### How to Run Project
 ```bash
 colcon build --symlink-install
-source ~git/forrestdrone_system/ros2_simulation/install/setup.bash (or provided directory)
-ros2 launch 41068_ignition_bringup 41068_ignition.launch.py husky:=true parrot:=true rviz:=true nav2:=true
+source ~/git/forrestdrone_system/ros2_simulation/install/setup.bash (or provided directory)
+ros2 launch 41068_ignition_bringup 41068_ignition.launch.py husky:=true parrot:=true rviz:=true nav2:=true slam:=true
 ```
 ### Likely stack for this project
 - **Core:** `rclpy`/`rclcpp`, `ros2launch`, `tf2`
