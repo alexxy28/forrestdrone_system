@@ -4,3 +4,5 @@ ros2_simulation/log
 build
 install
 log
+__pycache__/
+*.pyc
