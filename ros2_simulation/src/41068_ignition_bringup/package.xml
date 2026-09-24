@@ -8,9 +8,12 @@
   <license>Apache 2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
 
   <!-- ROS IGN -->
   <depend>ros_ign_interfaces</depend>
+  <depend>rqt_gui</depend>
+  <depend>rqt_gui_py</depend>
   <depend>ros_ign_gazebo</depend>
   <depend>ros_ign_bridge</depend>
 
@@ -32,5 +35,6 @@
     <build_type>ament_cmake</build_type>
     <gazebo_ros gazebo_model_path="${prefix}/models"/>
     <gazebo_ros gazebo_media_path="${prefix}/worlds"/>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
   </export>
 </package>

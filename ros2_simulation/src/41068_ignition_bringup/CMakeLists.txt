@@ -7,8 +7,10 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-
+find_package(ament_cmake_python REQUIRED)
 find_package(ros_ign_interfaces REQUIRED)
+
+ament_python_install_package(rqt_terrain_plugin)
 
 install(
   DIRECTORY config launch models urdf_husky worlds urdf_parrot
@@ -16,7 +18,15 @@ install(
 )
 
 install(
-  PROGRAMS scripts/dynamic_world_demo.py scripts/basic_autonomy_demo.py
+  FILES plugin.xml
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(
+  PROGRAMS
+    scripts/dynamic_world_demo.py
+    scripts/basic_autonomy_demo.py
+    scripts/terrain_map_builder.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -24,5 +34,8 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+find_package(pluginlib REQUIRED)
+pluginlib_export_plugin_description_file(rqt_gui plugin.xml)
 
 ament_package()

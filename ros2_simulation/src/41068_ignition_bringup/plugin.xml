@@ -1,0 +1,14 @@
+<library path="rqt_terrain_plugin">
+  <class name="TerrainMapPlugin" type="rqt_terrain_plugin.terrain_plugin.TerrainMapPlugin" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Visualizes accumulated LiDAR terrain points as a projected topography view inside rqt.
+    </description>
+    <qtgui>
+      <group>
+        <label>Robot Tools</label>
+      </group>
+      <label>Terrain Map</label>
+      <statustip>Displays the accumulated terrain cloud from the Parrot LiDAR.</statustip>
+    </qtgui>
+  </class>
+</library>

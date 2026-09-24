@@ -260,7 +260,7 @@
           <plugin
             filename="ignition-gazebo-thermal-system"
             name="gz::sim::systems::Thermal">
-            <temperature>390.0</temperature>
+            <temperature>290.0</temperature>
           </plugin>
         </visual>
         <visual name="canopy_visual">
@@ -277,7 +277,7 @@
           <plugin
             filename="ignition-gazebo-thermal-system"
             name="gz::sim::systems::Thermal">
-            <temperature>390.0</temperature>
+            <temperature>290.0</temperature>
           </plugin>
         </visual>
       </link>
@@ -872,6 +872,19 @@
         </visual>
       </link>
     </model>
+
+    <include>
+      <uri>
+        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Casual female
+      </uri>
+      <name>human_heat1</name>
+      <pose>-15 -10 1 -1.7 0 0</pose>
+      <plugin
+        filename="ignition-gazebo-thermal-system"
+        name="gz::sim::systems::Thermal">
+        <temperature>315.0</temperature>
+      </plugin>
+    </include>
 
     <gui fullscreen='0'>
       <camera name='user_camera'>
