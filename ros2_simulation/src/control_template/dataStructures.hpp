@@ -3,6 +3,12 @@
  
 #include <vector>
 
+
+struct Waypoint{
+    double x;
+    double y;
+};
+
 struct lidarInformation{
     double angleMin;
     double angleMax;
