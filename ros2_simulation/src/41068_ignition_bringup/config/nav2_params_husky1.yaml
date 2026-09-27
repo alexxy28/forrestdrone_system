@@ -168,7 +168,7 @@ controller_server:
       PathDist.scale: 32.0
       GoalDist.scale: 24.0
       RotateToGoal.scale: 32.0
-      RotateToGoal.xy_goal_tolerance: 2.0
+      RotateToGoal.xy_goal_tolerance: 1.0
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
 local_costmap:
