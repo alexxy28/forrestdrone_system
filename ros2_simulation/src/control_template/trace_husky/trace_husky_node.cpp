@@ -2,6 +2,7 @@
 #include "terrain_planner.hpp"
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/point_stamped.hpp>
 #include <nav2_msgs/action/navigate_to_pose.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
@@ -67,6 +68,14 @@ public:
                     &TraceHuskyNode::huskyOdomCallback,
                     this,
                     std::placeholders::_1));
+	casualty_sub_ =
+    	    create_subscription<geometry_msgs::msg::PointStamped>(
+        	"/trace/casualty_position",
+        	10,
+        	std::bind(
+            	    &TraceHuskyNode::casualtyCallback,
+            	    this,
+            	    std::placeholders::_1));
 
         path_pub_ =
             create_publisher<nav_msgs::msg::Path>(
@@ -99,6 +108,21 @@ public:
     }
 
 private:
+    void casualtyCallback(
+    const geometry_msgs::msg::PointStamped::SharedPtr msg)
+{
+    target_x_ = msg->point.x;
+    target_y_ = msg->point.y;
+    casualty_received_ = true;
+
+    RCLCPP_INFO(
+        get_logger(),
+        "TRACE CASUALTY RECEIVED: (%.2f, %.2f) in frame %s",
+        target_x_,
+        target_y_,
+        msg->header.frame_id.c_str());
+}
+
     void terrainCallback(
         const sensor_msgs::msg::PointCloud2::SharedPtr msg)
     {
@@ -310,6 +334,17 @@ private:
         // =====================================================
         if (planner_mode_ == 3)
         {
+
+	    if (!casualty_received_)
+{
+    RCLCPP_INFO_THROTTLE(
+        get_logger(),
+        *get_clock(),
+        3000,
+        "DEMO 3: Waiting for confirmed casualty detection...");
+    return;
+}
+
             if (!terrain_received_ ||
                 !terrain_map_.hasTerrain())
             {
@@ -810,6 +845,12 @@ private:
 
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
+
+
+    rclcpp::Subscription<
+        geometry_msgs::msg::PointStamped>::SharedPtr casualty_sub_;
+
+    bool casualty_received_ = false;
 
     double target_x_ = 0.0;
     double target_y_ = 0.0;
