@@ -876,7 +876,7 @@
     <include>
       <uri>model://human</uri>
       <name>human_heat1</name>
-      <pose>-15 -10 1 -1.7 0 0</pose>
+      <pose>2 0 1 -1.7 0 0</pose>
     </include>
 
     <gui fullscreen='0'>

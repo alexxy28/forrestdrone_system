@@ -64,6 +64,12 @@ def generate_launch_description():
             'pointcloud_topic': LaunchConfiguration('pointcloud_topic'),
             'output_topic': LaunchConfiguration('output_topic'),
         }],
+
+	remappings=[
+            ('/tf', '/parrot1/tf'),
+            ('/tf_static', '/parrot1/tf_static'),
+        ],
+
         output='screen',
     ))
 
