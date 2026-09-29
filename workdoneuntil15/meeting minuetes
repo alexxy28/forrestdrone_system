@@ -1,0 +1,29 @@
+EVERYTHING REMEMBER TO ADD THE RUN LAUNCH LINE AT THE TOP OF THE FILE 
+NEW MEETING 22 SEPT
+
+Ben> Simulation and added trees, mountains 
+Pri> husky movement, no sensor yet 
+Alex1> heat sensor 
+Alex2> LiDAR
+Eva > Drone, 
+
+Next steps
+Ben > work on UI? show basic termal camera, hum
+Alex1> termal camera - add laser?
+Alex2> keep working on LIDAR!!!!!!!
+Pri> working on human detection
+eva> LIDAR 
+
+What we need for C3 
+obstacle detection in lidar 
+husky lidar - im gonna run into a tree we can then turn around it 
+drone around lidar - 360 lidar around it to ensure it doesnt crash (20 meters-half way up) curve around mountain 
+generati waypoint for heat detector - get heat signature from human (attach laser points straight ahead to find distance 
+adding visuals waypoints - for drone to send path to husky 
+work out if we want to do intermidate waypoints for husky and drone 
+
+
+add human model gazebo 
+rgb camera for detection
+sees what the termal camera sees but in rgb 
+rgb determines its a person 
