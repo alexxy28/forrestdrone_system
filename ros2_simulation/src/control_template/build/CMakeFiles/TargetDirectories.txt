@@ -1,6 +1,7 @@
 /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles/uninstall.dir
 /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles/control_template_uninstall.dir
 /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles/lidar_test.dir
+/home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles/trace_husky_node.dir
 /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles/test.dir
 /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles/edit_cache.dir
 /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles/rebuild_cache.dir

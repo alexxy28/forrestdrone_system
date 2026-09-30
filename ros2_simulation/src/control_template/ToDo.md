@@ -109,3 +109,4 @@ person yet.
 11. Add parrot_node/husky_node/system_control_node executables to CMakeLists.txt
 12. Full state machine
 13. Documentation
+14. single launch file that starts all nodes (so we only need one command)

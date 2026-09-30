@@ -210,6 +210,19 @@ lidar_test/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/build
 .PHONY : lidar_test/fast
 
+#=============================================================================
+# Target rules for targets named trace_husky_node
+
+# Build rule for target.
+trace_husky_node: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 trace_husky_node
+.PHONY : trace_husky_node
+
+# fast build rule for target.
+trace_husky_node/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/build
+.PHONY : trace_husky_node/fast
+
 husky.o: husky.cpp.o
 .PHONY : husky.o
 
@@ -330,6 +343,78 @@ sensor.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/sensor.cpp.s
 .PHONY : sensor.cpp.s
 
+trace_husky/terrain_map.o: trace_husky/terrain_map.cpp.o
+.PHONY : trace_husky/terrain_map.o
+
+# target to build an object file
+trace_husky/terrain_map.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_map.cpp.o
+.PHONY : trace_husky/terrain_map.cpp.o
+
+trace_husky/terrain_map.i: trace_husky/terrain_map.cpp.i
+.PHONY : trace_husky/terrain_map.i
+
+# target to preprocess a source file
+trace_husky/terrain_map.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_map.cpp.i
+.PHONY : trace_husky/terrain_map.cpp.i
+
+trace_husky/terrain_map.s: trace_husky/terrain_map.cpp.s
+.PHONY : trace_husky/terrain_map.s
+
+# target to generate assembly for a file
+trace_husky/terrain_map.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_map.cpp.s
+.PHONY : trace_husky/terrain_map.cpp.s
+
+trace_husky/terrain_planner.o: trace_husky/terrain_planner.cpp.o
+.PHONY : trace_husky/terrain_planner.o
+
+# target to build an object file
+trace_husky/terrain_planner.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_planner.cpp.o
+.PHONY : trace_husky/terrain_planner.cpp.o
+
+trace_husky/terrain_planner.i: trace_husky/terrain_planner.cpp.i
+.PHONY : trace_husky/terrain_planner.i
+
+# target to preprocess a source file
+trace_husky/terrain_planner.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_planner.cpp.i
+.PHONY : trace_husky/terrain_planner.cpp.i
+
+trace_husky/terrain_planner.s: trace_husky/terrain_planner.cpp.s
+.PHONY : trace_husky/terrain_planner.s
+
+# target to generate assembly for a file
+trace_husky/terrain_planner.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_planner.cpp.s
+.PHONY : trace_husky/terrain_planner.cpp.s
+
+trace_husky/trace_husky_node.o: trace_husky/trace_husky_node.cpp.o
+.PHONY : trace_husky/trace_husky_node.o
+
+# target to build an object file
+trace_husky/trace_husky_node.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/trace_husky_node.cpp.o
+.PHONY : trace_husky/trace_husky_node.cpp.o
+
+trace_husky/trace_husky_node.i: trace_husky/trace_husky_node.cpp.i
+.PHONY : trace_husky/trace_husky_node.i
+
+# target to preprocess a source file
+trace_husky/trace_husky_node.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/trace_husky_node.cpp.i
+.PHONY : trace_husky/trace_husky_node.cpp.i
+
+trace_husky/trace_husky_node.s: trace_husky/trace_husky_node.cpp.s
+.PHONY : trace_husky/trace_husky_node.s
+
+# target to generate assembly for a file
+trace_husky/trace_husky_node.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/trace_husky_node.cpp.s
+.PHONY : trace_husky/trace_husky_node.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -346,6 +431,7 @@ help:
 	@echo "... control_template_uninstall"
 	@echo "... uninstall"
 	@echo "... lidar_test"
+	@echo "... trace_husky_node"
 	@echo "... husky.o"
 	@echo "... husky.i"
 	@echo "... husky.s"
@@ -361,6 +447,15 @@ help:
 	@echo "... sensor.o"
 	@echo "... sensor.i"
 	@echo "... sensor.s"
+	@echo "... trace_husky/terrain_map.o"
+	@echo "... trace_husky/terrain_map.i"
+	@echo "... trace_husky/terrain_map.s"
+	@echo "... trace_husky/terrain_planner.o"
+	@echo "... trace_husky/terrain_planner.i"
+	@echo "... trace_husky/terrain_planner.s"
+	@echo "... trace_husky/trace_husky_node.o"
+	@echo "... trace_husky/trace_husky_node.i"
+	@echo "... trace_husky/trace_husky_node.s"
 .PHONY : help
 
 
