@@ -48,11 +48,11 @@ SystemControlNode::SystemControlNode()
     const auto latched = rclcpp::QoS(1).reliable().transient_local();
 
     terrainSub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
-        "/parrot1/terrain_points", rclcpp::SensorDataQoS(),
+        topics::PARROT_TERRAIN, rclcpp::SensorDataQoS(),
         std::bind(&SystemControlNode::terrainCallback, this, std::placeholders::_1));
 
     huskyOdomSub_ = create_subscription<nav_msgs::msg::Odometry>(
-        "/husky1/odometry", rclcpp::SensorDataQoS(),
+        topics::HUSKY_ODOM, rclcpp::SensorDataQoS(),
         std::bind(&SystemControlNode::huskyOdomCallback, this, std::placeholders::_1));
 
     casualtySub_ = create_subscription<geometry_msgs::msg::PointStamped>(

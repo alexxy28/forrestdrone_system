@@ -5,7 +5,7 @@
 
 Husky::Husky(rclcpp::Node* node)
     : node_(node),
-      navClient_(rclcpp_action::create_client<NavigateToPose>(node, "/husky1/navigate_to_pose")){
+      navClient_(rclcpp_action::create_client<NavigateToPose>(node, topics::HUSKY_NAVIGATE)){
 }
 
 

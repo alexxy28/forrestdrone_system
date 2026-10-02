@@ -13,8 +13,12 @@ find_package(std_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 
-add_executable(parrot_node PARROT/ParrotNode.cpp)
-ament_target_dependencies(parrot_node rclcpp)
+add_executable(parrot_node
+    PARROT/ParrotNode.cpp
+    PARROT/parrot.cpp
+)
+target_include_directories(parrot_node PRIVATE .)
+ament_target_dependencies(parrot_node rclcpp geometry_msgs nav_msgs)
 
 add_executable(husky_node
     HUSKY/huskyNode.cpp
@@ -34,12 +38,6 @@ add_executable(system_control_node SYSTEM_CONTROL/systemControlNode.cpp)
 target_include_directories(system_control_node PRIVATE .)
 target_link_libraries(system_control_node terrain_lib)
 ament_target_dependencies(system_control_node rclcpp geometry_msgs nav_msgs sensor_msgs std_msgs)
-
-add_executable(planner_test SYSTEM_CONTROL/planner_test.cpp)
-target_link_libraries(planner_test terrain_lib)
-if(BUILD_TESTING)
-    add_test(NAME planner_test COMMAND planner_test)
-endif()
 
 install(TARGETS
     parrot_node

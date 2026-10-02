@@ -3,10 +3,16 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <string>
 #include <tf2/exceptions.h>
 
+// The simulator publishes each robot's transforms under its own namespace,
+// while the TF listener always subscribes to /tf and /tf_static.
 HuskyNode::HuskyNode()
-    : Node("husky_node"),
+    : Node("husky_node", rclcpp::NodeOptions().arguments({
+          "--ros-args",
+          "-r", std::string("/tf:=") + topics::HUSKY_TF,
+          "-r", std::string("/tf_static:=") + topics::HUSKY_TF_STATIC})),
       husky_(this),
       tfBuffer_(get_clock()),
       tfListener_(tfBuffer_, this, false)
