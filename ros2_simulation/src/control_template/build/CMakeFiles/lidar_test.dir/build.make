@@ -83,109 +83,27 @@ CMakeFiles/lidar_test.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lidar_test.dir/main.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/main.cpp -o CMakeFiles/lidar_test.dir/main.cpp.s
 
-CMakeFiles/lidar_test.dir/lidar.cpp.o: CMakeFiles/lidar_test.dir/flags.make
-CMakeFiles/lidar_test.dir/lidar.cpp.o: ../lidar.cpp
-CMakeFiles/lidar_test.dir/lidar.cpp.o: CMakeFiles/lidar_test.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/lidar_test.dir/lidar.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/lidar_test.dir/lidar.cpp.o -MF CMakeFiles/lidar_test.dir/lidar.cpp.o.d -o CMakeFiles/lidar_test.dir/lidar.cpp.o -c /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/lidar.cpp
-
-CMakeFiles/lidar_test.dir/lidar.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lidar_test.dir/lidar.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/lidar.cpp > CMakeFiles/lidar_test.dir/lidar.cpp.i
-
-CMakeFiles/lidar_test.dir/lidar.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lidar_test.dir/lidar.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/lidar.cpp -o CMakeFiles/lidar_test.dir/lidar.cpp.s
-
-CMakeFiles/lidar_test.dir/sensor.cpp.o: CMakeFiles/lidar_test.dir/flags.make
-CMakeFiles/lidar_test.dir/sensor.cpp.o: ../sensor.cpp
-CMakeFiles/lidar_test.dir/sensor.cpp.o: CMakeFiles/lidar_test.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/lidar_test.dir/sensor.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/lidar_test.dir/sensor.cpp.o -MF CMakeFiles/lidar_test.dir/sensor.cpp.o.d -o CMakeFiles/lidar_test.dir/sensor.cpp.o -c /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/sensor.cpp
-
-CMakeFiles/lidar_test.dir/sensor.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lidar_test.dir/sensor.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/sensor.cpp > CMakeFiles/lidar_test.dir/sensor.cpp.i
-
-CMakeFiles/lidar_test.dir/sensor.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lidar_test.dir/sensor.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/sensor.cpp -o CMakeFiles/lidar_test.dir/sensor.cpp.s
-
-CMakeFiles/lidar_test.dir/robot.cpp.o: CMakeFiles/lidar_test.dir/flags.make
-CMakeFiles/lidar_test.dir/robot.cpp.o: ../robot.cpp
-CMakeFiles/lidar_test.dir/robot.cpp.o: CMakeFiles/lidar_test.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/lidar_test.dir/robot.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/lidar_test.dir/robot.cpp.o -MF CMakeFiles/lidar_test.dir/robot.cpp.o.d -o CMakeFiles/lidar_test.dir/robot.cpp.o -c /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/robot.cpp
-
-CMakeFiles/lidar_test.dir/robot.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lidar_test.dir/robot.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/robot.cpp > CMakeFiles/lidar_test.dir/robot.cpp.i
-
-CMakeFiles/lidar_test.dir/robot.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lidar_test.dir/robot.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/robot.cpp -o CMakeFiles/lidar_test.dir/robot.cpp.s
-
-CMakeFiles/lidar_test.dir/husky.cpp.o: CMakeFiles/lidar_test.dir/flags.make
-CMakeFiles/lidar_test.dir/husky.cpp.o: ../husky.cpp
-CMakeFiles/lidar_test.dir/husky.cpp.o: CMakeFiles/lidar_test.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/lidar_test.dir/husky.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/lidar_test.dir/husky.cpp.o -MF CMakeFiles/lidar_test.dir/husky.cpp.o.d -o CMakeFiles/lidar_test.dir/husky.cpp.o -c /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/husky.cpp
-
-CMakeFiles/lidar_test.dir/husky.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lidar_test.dir/husky.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/husky.cpp > CMakeFiles/lidar_test.dir/husky.cpp.i
-
-CMakeFiles/lidar_test.dir/husky.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lidar_test.dir/husky.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/student/git/forrestdrone_system/ros2_simulation/src/control_template/husky.cpp -o CMakeFiles/lidar_test.dir/husky.cpp.s
-
 # Object files for target lidar_test
 lidar_test_OBJECTS = \
-"CMakeFiles/lidar_test.dir/main.cpp.o" \
-"CMakeFiles/lidar_test.dir/lidar.cpp.o" \
-"CMakeFiles/lidar_test.dir/sensor.cpp.o" \
-"CMakeFiles/lidar_test.dir/robot.cpp.o" \
-"CMakeFiles/lidar_test.dir/husky.cpp.o"
+"CMakeFiles/lidar_test.dir/main.cpp.o"
 
 # External object files for target lidar_test
 lidar_test_EXTERNAL_OBJECTS =
 
 lidar_test: CMakeFiles/lidar_test.dir/main.cpp.o
-lidar_test: CMakeFiles/lidar_test.dir/lidar.cpp.o
-lidar_test: CMakeFiles/lidar_test.dir/sensor.cpp.o
-lidar_test: CMakeFiles/lidar_test.dir/robot.cpp.o
-lidar_test: CMakeFiles/lidar_test.dir/husky.cpp.o
 lidar_test: CMakeFiles/lidar_test.dir/build.make
+lidar_test: libhusky_lib.a
+lidar_test: /opt/ros/humble/lib/librclcpp_action.so
 lidar_test: /opt/ros/humble/lib/librclcpp.so
-lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_fastrtps_c.so
-lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_fastrtps_cpp.so
-lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_introspection_c.so
-lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_introspection_cpp.so
-lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_generator_py.so
 lidar_test: /opt/ros/humble/lib/liblibstatistics_collector.so
-lidar_test: /opt/ros/humble/lib/librcl.so
-lidar_test: /opt/ros/humble/lib/librmw_implementation.so
-lidar_test: /opt/ros/humble/lib/libament_index_cpp.so
-lidar_test: /opt/ros/humble/lib/librcl_logging_spdlog.so
-lidar_test: /opt/ros/humble/lib/librcl_logging_interface.so
-lidar_test: /opt/ros/humble/lib/librcl_yaml_param_parser.so
-lidar_test: /opt/ros/humble/lib/libyaml.so
 lidar_test: /opt/ros/humble/lib/librosgraph_msgs__rosidl_typesupport_fastrtps_c.so
-lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_fastrtps_c.so
 lidar_test: /opt/ros/humble/lib/librosgraph_msgs__rosidl_typesupport_fastrtps_cpp.so
-lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_fastrtps_cpp.so
 lidar_test: /opt/ros/humble/lib/librosgraph_msgs__rosidl_typesupport_introspection_c.so
-lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_introspection_c.so
 lidar_test: /opt/ros/humble/lib/librosgraph_msgs__rosidl_typesupport_introspection_cpp.so
-lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_introspection_cpp.so
 lidar_test: /opt/ros/humble/lib/librosgraph_msgs__rosidl_typesupport_cpp.so
-lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_cpp.so
 lidar_test: /opt/ros/humble/lib/librosgraph_msgs__rosidl_generator_py.so
-lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_generator_py.so
 lidar_test: /opt/ros/humble/lib/librosgraph_msgs__rosidl_typesupport_c.so
-lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_c.so
 lidar_test: /opt/ros/humble/lib/librosgraph_msgs__rosidl_generator_c.so
-lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_generator_c.so
 lidar_test: /opt/ros/humble/lib/libstatistics_msgs__rosidl_typesupport_fastrtps_c.so
 lidar_test: /opt/ros/humble/lib/libstatistics_msgs__rosidl_typesupport_fastrtps_cpp.so
 lidar_test: /opt/ros/humble/lib/libstatistics_msgs__rosidl_typesupport_introspection_c.so
@@ -194,48 +112,101 @@ lidar_test: /opt/ros/humble/lib/libstatistics_msgs__rosidl_typesupport_cpp.so
 lidar_test: /opt/ros/humble/lib/libstatistics_msgs__rosidl_generator_py.so
 lidar_test: /opt/ros/humble/lib/libstatistics_msgs__rosidl_typesupport_c.so
 lidar_test: /opt/ros/humble/lib/libstatistics_msgs__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/librcl_action.so
+lidar_test: /opt/ros/humble/lib/librcl.so
+lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_fastrtps_c.so
+lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_introspection_c.so
+lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_fastrtps_cpp.so
+lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_introspection_cpp.so
+lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_cpp.so
+lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_generator_py.so
+lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/librcl_interfaces__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/librcl_yaml_param_parser.so
+lidar_test: /opt/ros/humble/lib/libyaml.so
 lidar_test: /opt/ros/humble/lib/libtracetools.so
+lidar_test: /opt/ros/humble/lib/librmw_implementation.so
+lidar_test: /opt/ros/humble/lib/libament_index_cpp.so
+lidar_test: /opt/ros/humble/lib/librcl_logging_spdlog.so
+lidar_test: /opt/ros/humble/lib/librcl_logging_interface.so
+lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_fastrtps_c.so
+lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_fastrtps_cpp.so
+lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_introspection_c.so
+lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_introspection_cpp.so
+lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_generator_py.so
+lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_cpp.so
+lidar_test: /opt/ros/humble/lib/libnav2_msgs__rosidl_typesupport_fastrtps_c.so
+lidar_test: /opt/ros/humble/lib/libaction_msgs__rosidl_typesupport_fastrtps_c.so
+lidar_test: /opt/ros/humble/lib/libunique_identifier_msgs__rosidl_typesupport_fastrtps_c.so
+lidar_test: /opt/ros/humble/lib/libnav_msgs__rosidl_typesupport_fastrtps_c.so
 lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_fastrtps_c.so
 lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_fastrtps_c.so
 lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so
 lidar_test: /opt/ros/humble/lib/librosidl_typesupport_fastrtps_c.so
+lidar_test: /opt/ros/humble/lib/libnav2_msgs__rosidl_typesupport_fastrtps_cpp.so
+lidar_test: /opt/ros/humble/lib/libaction_msgs__rosidl_typesupport_fastrtps_cpp.so
+lidar_test: /opt/ros/humble/lib/libunique_identifier_msgs__rosidl_typesupport_fastrtps_cpp.so
+lidar_test: /opt/ros/humble/lib/libnav_msgs__rosidl_typesupport_fastrtps_cpp.so
 lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_fastrtps_cpp.so
 lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_fastrtps_cpp.so
 lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so
 lidar_test: /opt/ros/humble/lib/librosidl_typesupport_fastrtps_cpp.so
 lidar_test: /opt/ros/humble/lib/libfastcdr.so.1.0.29
 lidar_test: /opt/ros/humble/lib/librmw.so
+lidar_test: /opt/ros/humble/lib/libnav2_msgs__rosidl_typesupport_introspection_c.so
+lidar_test: /opt/ros/humble/lib/libaction_msgs__rosidl_typesupport_introspection_c.so
+lidar_test: /opt/ros/humble/lib/libunique_identifier_msgs__rosidl_typesupport_introspection_c.so
+lidar_test: /opt/ros/humble/lib/libnav_msgs__rosidl_typesupport_introspection_c.so
 lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_introspection_c.so
 lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_introspection_c.so
 lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so
+lidar_test: /opt/ros/humble/lib/libnav2_msgs__rosidl_typesupport_introspection_cpp.so
+lidar_test: /opt/ros/humble/lib/libaction_msgs__rosidl_typesupport_introspection_cpp.so
+lidar_test: /opt/ros/humble/lib/libunique_identifier_msgs__rosidl_typesupport_introspection_cpp.so
+lidar_test: /opt/ros/humble/lib/libnav_msgs__rosidl_typesupport_introspection_cpp.so
 lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_introspection_cpp.so
 lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_introspection_cpp.so
 lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so
 lidar_test: /opt/ros/humble/lib/librosidl_typesupport_introspection_cpp.so
 lidar_test: /opt/ros/humble/lib/librosidl_typesupport_introspection_c.so
-lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_c.so
-lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_generator_c.so
-lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_generator_py.so
-lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_c.so
-lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_generator_c.so
-lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_generator_py.so
-lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_generator_py.so
-lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_c.so
-lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_typesupport_c.so
-lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_generator_c.so
-lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_generator_c.so
-lidar_test: /usr/lib/x86_64-linux-gnu/libpython3.10.so
-lidar_test: /opt/ros/humble/lib/libsensor_msgs__rosidl_typesupport_cpp.so
+lidar_test: /opt/ros/humble/lib/libnav2_msgs__rosidl_typesupport_cpp.so
+lidar_test: /opt/ros/humble/lib/libaction_msgs__rosidl_typesupport_cpp.so
+lidar_test: /opt/ros/humble/lib/libunique_identifier_msgs__rosidl_typesupport_cpp.so
+lidar_test: /opt/ros/humble/lib/libnav_msgs__rosidl_typesupport_cpp.so
 lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
 lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_cpp.so
 lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_typesupport_cpp.so
 lidar_test: /opt/ros/humble/lib/librosidl_typesupport_cpp.so
+lidar_test: /opt/ros/humble/lib/libnav2_msgs__rosidl_generator_py.so
+lidar_test: /opt/ros/humble/lib/libnav2_msgs__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/libnav2_msgs__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/libaction_msgs__rosidl_generator_py.so
+lidar_test: /opt/ros/humble/lib/libaction_msgs__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/libaction_msgs__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/libunique_identifier_msgs__rosidl_generator_py.so
+lidar_test: /opt/ros/humble/lib/libunique_identifier_msgs__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/libunique_identifier_msgs__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/libnav_msgs__rosidl_generator_py.so
+lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_generator_py.so
+lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_generator_py.so
+lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_generator_py.so
+lidar_test: /usr/lib/x86_64-linux-gnu/libpython3.10.so
+lidar_test: /opt/ros/humble/lib/libnav_msgs__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_typesupport_c.so
+lidar_test: /opt/ros/humble/lib/libnav_msgs__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/libgeometry_msgs__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/libstd_msgs__rosidl_generator_c.so
+lidar_test: /opt/ros/humble/lib/libbuiltin_interfaces__rosidl_generator_c.so
 lidar_test: /opt/ros/humble/lib/librosidl_typesupport_c.so
 lidar_test: /opt/ros/humble/lib/librcpputils.so
 lidar_test: /opt/ros/humble/lib/librosidl_runtime_c.so
 lidar_test: /opt/ros/humble/lib/librcutils.so
 lidar_test: CMakeFiles/lidar_test.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable lidar_test"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/student/git/forrestdrone_system/ros2_simulation/src/control_template/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable lidar_test"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/lidar_test.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

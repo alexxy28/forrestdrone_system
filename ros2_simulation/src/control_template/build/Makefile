@@ -198,6 +198,19 @@ control_template_uninstall/fast:
 .PHONY : control_template_uninstall/fast
 
 #=============================================================================
+# Target rules for targets named husky_lib
+
+# Build rule for target.
+husky_lib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 husky_lib
+.PHONY : husky_lib
+
+# fast build rule for target.
+husky_lib/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_lib.dir/build.make CMakeFiles/husky_lib.dir/build
+.PHONY : husky_lib/fast
+
+#=============================================================================
 # Target rules for targets named lidar_test
 
 # Build rule for target.
@@ -211,65 +224,346 @@ lidar_test/fast:
 .PHONY : lidar_test/fast
 
 #=============================================================================
-# Target rules for targets named trace_husky_node
+# Target rules for targets named camera_test
 
 # Build rule for target.
-trace_husky_node: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 trace_husky_node
-.PHONY : trace_husky_node
+camera_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 camera_test
+.PHONY : camera_test
 
 # fast build rule for target.
-trace_husky_node/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/build
-.PHONY : trace_husky_node/fast
+camera_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/build
+.PHONY : camera_test/fast
 
-husky.o: husky.cpp.o
-.PHONY : husky.o
+#=============================================================================
+# Target rules for targets named parrot_node
+
+# Build rule for target.
+parrot_node: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 parrot_node
+.PHONY : parrot_node
+
+# fast build rule for target.
+parrot_node/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/parrot_node.dir/build.make CMakeFiles/parrot_node.dir/build
+.PHONY : parrot_node/fast
+
+#=============================================================================
+# Target rules for targets named husky_node
+
+# Build rule for target.
+husky_node: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 husky_node
+.PHONY : husky_node
+
+# fast build rule for target.
+husky_node/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_node.dir/build.make CMakeFiles/husky_node.dir/build
+.PHONY : husky_node/fast
+
+#=============================================================================
+# Target rules for targets named terrain_lib
+
+# Build rule for target.
+terrain_lib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 terrain_lib
+.PHONY : terrain_lib
+
+# fast build rule for target.
+terrain_lib/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/terrain_lib.dir/build.make CMakeFiles/terrain_lib.dir/build
+.PHONY : terrain_lib/fast
+
+#=============================================================================
+# Target rules for targets named system_control_node
+
+# Build rule for target.
+system_control_node: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 system_control_node
+.PHONY : system_control_node
+
+# fast build rule for target.
+system_control_node/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/system_control_node.dir/build.make CMakeFiles/system_control_node.dir/build
+.PHONY : system_control_node/fast
+
+#=============================================================================
+# Target rules for targets named planner_test
+
+# Build rule for target.
+planner_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 planner_test
+.PHONY : planner_test
+
+# fast build rule for target.
+planner_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/planner_test.dir/build.make CMakeFiles/planner_test.dir/build
+.PHONY : planner_test/fast
+
+HUSKY/husky.o: HUSKY/husky.cpp.o
+.PHONY : HUSKY/husky.o
 
 # target to build an object file
-husky.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/husky.cpp.o
-.PHONY : husky.cpp.o
+HUSKY/husky.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_lib.dir/build.make CMakeFiles/husky_lib.dir/HUSKY/husky.cpp.o
+.PHONY : HUSKY/husky.cpp.o
 
-husky.i: husky.cpp.i
-.PHONY : husky.i
+HUSKY/husky.i: HUSKY/husky.cpp.i
+.PHONY : HUSKY/husky.i
 
 # target to preprocess a source file
-husky.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/husky.cpp.i
-.PHONY : husky.cpp.i
+HUSKY/husky.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_lib.dir/build.make CMakeFiles/husky_lib.dir/HUSKY/husky.cpp.i
+.PHONY : HUSKY/husky.cpp.i
 
-husky.s: husky.cpp.s
-.PHONY : husky.s
+HUSKY/husky.s: HUSKY/husky.cpp.s
+.PHONY : HUSKY/husky.s
 
 # target to generate assembly for a file
-husky.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/husky.cpp.s
-.PHONY : husky.cpp.s
+HUSKY/husky.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_lib.dir/build.make CMakeFiles/husky_lib.dir/HUSKY/husky.cpp.s
+.PHONY : HUSKY/husky.cpp.s
 
-lidar.o: lidar.cpp.o
-.PHONY : lidar.o
+HUSKY/huskyNode.o: HUSKY/huskyNode.cpp.o
+.PHONY : HUSKY/huskyNode.o
 
 # target to build an object file
-lidar.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/lidar.cpp.o
-.PHONY : lidar.cpp.o
+HUSKY/huskyNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_node.dir/build.make CMakeFiles/husky_node.dir/HUSKY/huskyNode.cpp.o
+.PHONY : HUSKY/huskyNode.cpp.o
 
-lidar.i: lidar.cpp.i
-.PHONY : lidar.i
+HUSKY/huskyNode.i: HUSKY/huskyNode.cpp.i
+.PHONY : HUSKY/huskyNode.i
 
 # target to preprocess a source file
-lidar.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/lidar.cpp.i
-.PHONY : lidar.cpp.i
+HUSKY/huskyNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_node.dir/build.make CMakeFiles/husky_node.dir/HUSKY/huskyNode.cpp.i
+.PHONY : HUSKY/huskyNode.cpp.i
 
-lidar.s: lidar.cpp.s
-.PHONY : lidar.s
+HUSKY/huskyNode.s: HUSKY/huskyNode.cpp.s
+.PHONY : HUSKY/huskyNode.s
 
 # target to generate assembly for a file
-lidar.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/lidar.cpp.s
-.PHONY : lidar.cpp.s
+HUSKY/huskyNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_node.dir/build.make CMakeFiles/husky_node.dir/HUSKY/huskyNode.cpp.s
+.PHONY : HUSKY/huskyNode.cpp.s
+
+PARROT/ParrotNode.o: PARROT/ParrotNode.cpp.o
+.PHONY : PARROT/ParrotNode.o
+
+# target to build an object file
+PARROT/ParrotNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/parrot_node.dir/build.make CMakeFiles/parrot_node.dir/PARROT/ParrotNode.cpp.o
+.PHONY : PARROT/ParrotNode.cpp.o
+
+PARROT/ParrotNode.i: PARROT/ParrotNode.cpp.i
+.PHONY : PARROT/ParrotNode.i
+
+# target to preprocess a source file
+PARROT/ParrotNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/parrot_node.dir/build.make CMakeFiles/parrot_node.dir/PARROT/ParrotNode.cpp.i
+.PHONY : PARROT/ParrotNode.cpp.i
+
+PARROT/ParrotNode.s: PARROT/ParrotNode.cpp.s
+.PHONY : PARROT/ParrotNode.s
+
+# target to generate assembly for a file
+PARROT/ParrotNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/parrot_node.dir/build.make CMakeFiles/parrot_node.dir/PARROT/ParrotNode.cpp.s
+.PHONY : PARROT/ParrotNode.cpp.s
+
+SENSORS/lidar.o: SENSORS/lidar.cpp.o
+.PHONY : SENSORS/lidar.o
+
+# target to build an object file
+SENSORS/lidar.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_lib.dir/build.make CMakeFiles/husky_lib.dir/SENSORS/lidar.cpp.o
+.PHONY : SENSORS/lidar.cpp.o
+
+SENSORS/lidar.i: SENSORS/lidar.cpp.i
+.PHONY : SENSORS/lidar.i
+
+# target to preprocess a source file
+SENSORS/lidar.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_lib.dir/build.make CMakeFiles/husky_lib.dir/SENSORS/lidar.cpp.i
+.PHONY : SENSORS/lidar.cpp.i
+
+SENSORS/lidar.s: SENSORS/lidar.cpp.s
+.PHONY : SENSORS/lidar.s
+
+# target to generate assembly for a file
+SENSORS/lidar.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/husky_lib.dir/build.make CMakeFiles/husky_lib.dir/SENSORS/lidar.cpp.s
+.PHONY : SENSORS/lidar.cpp.s
+
+SENSORS/rgbCamera.o: SENSORS/rgbCamera.cpp.o
+.PHONY : SENSORS/rgbCamera.o
+
+# target to build an object file
+SENSORS/rgbCamera.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/SENSORS/rgbCamera.cpp.o
+.PHONY : SENSORS/rgbCamera.cpp.o
+
+SENSORS/rgbCamera.i: SENSORS/rgbCamera.cpp.i
+.PHONY : SENSORS/rgbCamera.i
+
+# target to preprocess a source file
+SENSORS/rgbCamera.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/SENSORS/rgbCamera.cpp.i
+.PHONY : SENSORS/rgbCamera.cpp.i
+
+SENSORS/rgbCamera.s: SENSORS/rgbCamera.cpp.s
+.PHONY : SENSORS/rgbCamera.s
+
+# target to generate assembly for a file
+SENSORS/rgbCamera.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/SENSORS/rgbCamera.cpp.s
+.PHONY : SENSORS/rgbCamera.cpp.s
+
+SENSORS/thermalCamera.o: SENSORS/thermalCamera.cpp.o
+.PHONY : SENSORS/thermalCamera.o
+
+# target to build an object file
+SENSORS/thermalCamera.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/SENSORS/thermalCamera.cpp.o
+.PHONY : SENSORS/thermalCamera.cpp.o
+
+SENSORS/thermalCamera.i: SENSORS/thermalCamera.cpp.i
+.PHONY : SENSORS/thermalCamera.i
+
+# target to preprocess a source file
+SENSORS/thermalCamera.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/SENSORS/thermalCamera.cpp.i
+.PHONY : SENSORS/thermalCamera.cpp.i
+
+SENSORS/thermalCamera.s: SENSORS/thermalCamera.cpp.s
+.PHONY : SENSORS/thermalCamera.s
+
+# target to generate assembly for a file
+SENSORS/thermalCamera.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/SENSORS/thermalCamera.cpp.s
+.PHONY : SENSORS/thermalCamera.cpp.s
+
+SYSTEM_CONTROL/SystemControlNode.o: SYSTEM_CONTROL/SystemControlNode.cpp.o
+.PHONY : SYSTEM_CONTROL/SystemControlNode.o
+
+# target to build an object file
+SYSTEM_CONTROL/SystemControlNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/system_control_node.dir/build.make CMakeFiles/system_control_node.dir/SYSTEM_CONTROL/SystemControlNode.cpp.o
+.PHONY : SYSTEM_CONTROL/SystemControlNode.cpp.o
+
+SYSTEM_CONTROL/SystemControlNode.i: SYSTEM_CONTROL/SystemControlNode.cpp.i
+.PHONY : SYSTEM_CONTROL/SystemControlNode.i
+
+# target to preprocess a source file
+SYSTEM_CONTROL/SystemControlNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/system_control_node.dir/build.make CMakeFiles/system_control_node.dir/SYSTEM_CONTROL/SystemControlNode.cpp.i
+.PHONY : SYSTEM_CONTROL/SystemControlNode.cpp.i
+
+SYSTEM_CONTROL/SystemControlNode.s: SYSTEM_CONTROL/SystemControlNode.cpp.s
+.PHONY : SYSTEM_CONTROL/SystemControlNode.s
+
+# target to generate assembly for a file
+SYSTEM_CONTROL/SystemControlNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/system_control_node.dir/build.make CMakeFiles/system_control_node.dir/SYSTEM_CONTROL/SystemControlNode.cpp.s
+.PHONY : SYSTEM_CONTROL/SystemControlNode.cpp.s
+
+SYSTEM_CONTROL/planner_test.o: SYSTEM_CONTROL/planner_test.cpp.o
+.PHONY : SYSTEM_CONTROL/planner_test.o
+
+# target to build an object file
+SYSTEM_CONTROL/planner_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/planner_test.dir/build.make CMakeFiles/planner_test.dir/SYSTEM_CONTROL/planner_test.cpp.o
+.PHONY : SYSTEM_CONTROL/planner_test.cpp.o
+
+SYSTEM_CONTROL/planner_test.i: SYSTEM_CONTROL/planner_test.cpp.i
+.PHONY : SYSTEM_CONTROL/planner_test.i
+
+# target to preprocess a source file
+SYSTEM_CONTROL/planner_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/planner_test.dir/build.make CMakeFiles/planner_test.dir/SYSTEM_CONTROL/planner_test.cpp.i
+.PHONY : SYSTEM_CONTROL/planner_test.cpp.i
+
+SYSTEM_CONTROL/planner_test.s: SYSTEM_CONTROL/planner_test.cpp.s
+.PHONY : SYSTEM_CONTROL/planner_test.s
+
+# target to generate assembly for a file
+SYSTEM_CONTROL/planner_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/planner_test.dir/build.make CMakeFiles/planner_test.dir/SYSTEM_CONTROL/planner_test.cpp.s
+.PHONY : SYSTEM_CONTROL/planner_test.cpp.s
+
+SYSTEM_CONTROL/terrain_map.o: SYSTEM_CONTROL/terrain_map.cpp.o
+.PHONY : SYSTEM_CONTROL/terrain_map.o
+
+# target to build an object file
+SYSTEM_CONTROL/terrain_map.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/terrain_lib.dir/build.make CMakeFiles/terrain_lib.dir/SYSTEM_CONTROL/terrain_map.cpp.o
+.PHONY : SYSTEM_CONTROL/terrain_map.cpp.o
+
+SYSTEM_CONTROL/terrain_map.i: SYSTEM_CONTROL/terrain_map.cpp.i
+.PHONY : SYSTEM_CONTROL/terrain_map.i
+
+# target to preprocess a source file
+SYSTEM_CONTROL/terrain_map.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/terrain_lib.dir/build.make CMakeFiles/terrain_lib.dir/SYSTEM_CONTROL/terrain_map.cpp.i
+.PHONY : SYSTEM_CONTROL/terrain_map.cpp.i
+
+SYSTEM_CONTROL/terrain_map.s: SYSTEM_CONTROL/terrain_map.cpp.s
+.PHONY : SYSTEM_CONTROL/terrain_map.s
+
+# target to generate assembly for a file
+SYSTEM_CONTROL/terrain_map.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/terrain_lib.dir/build.make CMakeFiles/terrain_lib.dir/SYSTEM_CONTROL/terrain_map.cpp.s
+.PHONY : SYSTEM_CONTROL/terrain_map.cpp.s
+
+SYSTEM_CONTROL/terrain_planner.o: SYSTEM_CONTROL/terrain_planner.cpp.o
+.PHONY : SYSTEM_CONTROL/terrain_planner.o
+
+# target to build an object file
+SYSTEM_CONTROL/terrain_planner.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/terrain_lib.dir/build.make CMakeFiles/terrain_lib.dir/SYSTEM_CONTROL/terrain_planner.cpp.o
+.PHONY : SYSTEM_CONTROL/terrain_planner.cpp.o
+
+SYSTEM_CONTROL/terrain_planner.i: SYSTEM_CONTROL/terrain_planner.cpp.i
+.PHONY : SYSTEM_CONTROL/terrain_planner.i
+
+# target to preprocess a source file
+SYSTEM_CONTROL/terrain_planner.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/terrain_lib.dir/build.make CMakeFiles/terrain_lib.dir/SYSTEM_CONTROL/terrain_planner.cpp.i
+.PHONY : SYSTEM_CONTROL/terrain_planner.cpp.i
+
+SYSTEM_CONTROL/terrain_planner.s: SYSTEM_CONTROL/terrain_planner.cpp.s
+.PHONY : SYSTEM_CONTROL/terrain_planner.s
+
+# target to generate assembly for a file
+SYSTEM_CONTROL/terrain_planner.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/terrain_lib.dir/build.make CMakeFiles/terrain_lib.dir/SYSTEM_CONTROL/terrain_planner.cpp.s
+.PHONY : SYSTEM_CONTROL/terrain_planner.cpp.s
+
+camera_test.o: camera_test.cpp.o
+.PHONY : camera_test.o
+
+# target to build an object file
+camera_test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/camera_test.cpp.o
+.PHONY : camera_test.cpp.o
+
+camera_test.i: camera_test.cpp.i
+.PHONY : camera_test.i
+
+# target to preprocess a source file
+camera_test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/camera_test.cpp.i
+.PHONY : camera_test.cpp.i
+
+camera_test.s: camera_test.cpp.s
+.PHONY : camera_test.s
+
+# target to generate assembly for a file
+camera_test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/camera_test.dir/build.make CMakeFiles/camera_test.dir/camera_test.cpp.s
+.PHONY : camera_test.cpp.s
 
 main.o: main.cpp.o
 .PHONY : main.o
@@ -295,126 +589,6 @@ main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/main.cpp.s
 .PHONY : main.cpp.s
 
-robot.o: robot.cpp.o
-.PHONY : robot.o
-
-# target to build an object file
-robot.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/robot.cpp.o
-.PHONY : robot.cpp.o
-
-robot.i: robot.cpp.i
-.PHONY : robot.i
-
-# target to preprocess a source file
-robot.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/robot.cpp.i
-.PHONY : robot.cpp.i
-
-robot.s: robot.cpp.s
-.PHONY : robot.s
-
-# target to generate assembly for a file
-robot.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/robot.cpp.s
-.PHONY : robot.cpp.s
-
-sensor.o: sensor.cpp.o
-.PHONY : sensor.o
-
-# target to build an object file
-sensor.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/sensor.cpp.o
-.PHONY : sensor.cpp.o
-
-sensor.i: sensor.cpp.i
-.PHONY : sensor.i
-
-# target to preprocess a source file
-sensor.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/sensor.cpp.i
-.PHONY : sensor.cpp.i
-
-sensor.s: sensor.cpp.s
-.PHONY : sensor.s
-
-# target to generate assembly for a file
-sensor.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/lidar_test.dir/build.make CMakeFiles/lidar_test.dir/sensor.cpp.s
-.PHONY : sensor.cpp.s
-
-trace_husky/terrain_map.o: trace_husky/terrain_map.cpp.o
-.PHONY : trace_husky/terrain_map.o
-
-# target to build an object file
-trace_husky/terrain_map.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_map.cpp.o
-.PHONY : trace_husky/terrain_map.cpp.o
-
-trace_husky/terrain_map.i: trace_husky/terrain_map.cpp.i
-.PHONY : trace_husky/terrain_map.i
-
-# target to preprocess a source file
-trace_husky/terrain_map.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_map.cpp.i
-.PHONY : trace_husky/terrain_map.cpp.i
-
-trace_husky/terrain_map.s: trace_husky/terrain_map.cpp.s
-.PHONY : trace_husky/terrain_map.s
-
-# target to generate assembly for a file
-trace_husky/terrain_map.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_map.cpp.s
-.PHONY : trace_husky/terrain_map.cpp.s
-
-trace_husky/terrain_planner.o: trace_husky/terrain_planner.cpp.o
-.PHONY : trace_husky/terrain_planner.o
-
-# target to build an object file
-trace_husky/terrain_planner.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_planner.cpp.o
-.PHONY : trace_husky/terrain_planner.cpp.o
-
-trace_husky/terrain_planner.i: trace_husky/terrain_planner.cpp.i
-.PHONY : trace_husky/terrain_planner.i
-
-# target to preprocess a source file
-trace_husky/terrain_planner.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_planner.cpp.i
-.PHONY : trace_husky/terrain_planner.cpp.i
-
-trace_husky/terrain_planner.s: trace_husky/terrain_planner.cpp.s
-.PHONY : trace_husky/terrain_planner.s
-
-# target to generate assembly for a file
-trace_husky/terrain_planner.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/terrain_planner.cpp.s
-.PHONY : trace_husky/terrain_planner.cpp.s
-
-trace_husky/trace_husky_node.o: trace_husky/trace_husky_node.cpp.o
-.PHONY : trace_husky/trace_husky_node.o
-
-# target to build an object file
-trace_husky/trace_husky_node.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/trace_husky_node.cpp.o
-.PHONY : trace_husky/trace_husky_node.cpp.o
-
-trace_husky/trace_husky_node.i: trace_husky/trace_husky_node.cpp.i
-.PHONY : trace_husky/trace_husky_node.i
-
-# target to preprocess a source file
-trace_husky/trace_husky_node.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/trace_husky_node.cpp.i
-.PHONY : trace_husky/trace_husky_node.cpp.i
-
-trace_husky/trace_husky_node.s: trace_husky/trace_husky_node.cpp.s
-.PHONY : trace_husky/trace_husky_node.s
-
-# target to generate assembly for a file
-trace_husky/trace_husky_node.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/trace_husky_node.dir/build.make CMakeFiles/trace_husky_node.dir/trace_husky/trace_husky_node.cpp.s
-.PHONY : trace_husky/trace_husky_node.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -430,32 +604,50 @@ help:
 	@echo "... test"
 	@echo "... control_template_uninstall"
 	@echo "... uninstall"
+	@echo "... camera_test"
+	@echo "... husky_lib"
+	@echo "... husky_node"
 	@echo "... lidar_test"
-	@echo "... trace_husky_node"
-	@echo "... husky.o"
-	@echo "... husky.i"
-	@echo "... husky.s"
-	@echo "... lidar.o"
-	@echo "... lidar.i"
-	@echo "... lidar.s"
+	@echo "... parrot_node"
+	@echo "... planner_test"
+	@echo "... system_control_node"
+	@echo "... terrain_lib"
+	@echo "... HUSKY/husky.o"
+	@echo "... HUSKY/husky.i"
+	@echo "... HUSKY/husky.s"
+	@echo "... HUSKY/huskyNode.o"
+	@echo "... HUSKY/huskyNode.i"
+	@echo "... HUSKY/huskyNode.s"
+	@echo "... PARROT/ParrotNode.o"
+	@echo "... PARROT/ParrotNode.i"
+	@echo "... PARROT/ParrotNode.s"
+	@echo "... SENSORS/lidar.o"
+	@echo "... SENSORS/lidar.i"
+	@echo "... SENSORS/lidar.s"
+	@echo "... SENSORS/rgbCamera.o"
+	@echo "... SENSORS/rgbCamera.i"
+	@echo "... SENSORS/rgbCamera.s"
+	@echo "... SENSORS/thermalCamera.o"
+	@echo "... SENSORS/thermalCamera.i"
+	@echo "... SENSORS/thermalCamera.s"
+	@echo "... SYSTEM_CONTROL/SystemControlNode.o"
+	@echo "... SYSTEM_CONTROL/SystemControlNode.i"
+	@echo "... SYSTEM_CONTROL/SystemControlNode.s"
+	@echo "... SYSTEM_CONTROL/planner_test.o"
+	@echo "... SYSTEM_CONTROL/planner_test.i"
+	@echo "... SYSTEM_CONTROL/planner_test.s"
+	@echo "... SYSTEM_CONTROL/terrain_map.o"
+	@echo "... SYSTEM_CONTROL/terrain_map.i"
+	@echo "... SYSTEM_CONTROL/terrain_map.s"
+	@echo "... SYSTEM_CONTROL/terrain_planner.o"
+	@echo "... SYSTEM_CONTROL/terrain_planner.i"
+	@echo "... SYSTEM_CONTROL/terrain_planner.s"
+	@echo "... camera_test.o"
+	@echo "... camera_test.i"
+	@echo "... camera_test.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
-	@echo "... robot.o"
-	@echo "... robot.i"
-	@echo "... robot.s"
-	@echo "... sensor.o"
-	@echo "... sensor.i"
-	@echo "... sensor.s"
-	@echo "... trace_husky/terrain_map.o"
-	@echo "... trace_husky/terrain_map.i"
-	@echo "... trace_husky/terrain_map.s"
-	@echo "... trace_husky/terrain_planner.o"
-	@echo "... trace_husky/terrain_planner.i"
-	@echo "... trace_husky/terrain_planner.s"
-	@echo "... trace_husky/trace_husky_node.o"
-	@echo "... trace_husky/trace_husky_node.i"
-	@echo "... trace_husky/trace_husky_node.s"
 .PHONY : help
 
 

@@ -1,4 +1,6 @@
-#include "SystemControlNode.hpp"
+#include "systemControlNode.hpp"
+
+#include "dataStructures.hpp"
 
 #include <chrono>
 #include <functional>
@@ -54,15 +56,15 @@ SystemControlNode::SystemControlNode()
         std::bind(&SystemControlNode::huskyOdomCallback, this, std::placeholders::_1));
 
     casualtySub_ = create_subscription<geometry_msgs::msg::PointStamped>(
-        "/mission/casualty", latched,
+        topics::CASUALTY, latched,
         std::bind(&SystemControlNode::casualtyCallback, this, std::placeholders::_1));
 
     huskyStatusSub_ = create_subscription<std_msgs::msg::String>(
-        "/mission/husky_status", latched,
+        topics::HUSKY_STATUS, latched,
         std::bind(&SystemControlNode::huskyStatusCallback, this, std::placeholders::_1));
 
-    routePub_ = create_publisher<nav_msgs::msg::Path>("/mission/route", latched);
-    statePub_ = create_publisher<std_msgs::msg::String>("/mission/state", latched);
+    routePub_ = create_publisher<nav_msgs::msg::Path>(topics::ROUTE, latched);
+    statePub_ = create_publisher<std_msgs::msg::String>(topics::STATE, latched);
 
     // While PLANNING, retry once a second: the map may have grown since the last attempt.
     timer_ = create_wall_timer(std::chrono::seconds(1), std::bind(&SystemControlNode::tryPlan, this));
@@ -100,9 +102,9 @@ void SystemControlNode::huskyStatusCallback(const std_msgs::msg::String::SharedP
     if (state_ != State::HUSKY_EN_ROUTE) {
         return;
     }
-    if (msg->data == "ARRIVED") {
+    if (msg->data == toString(HuskyStatus::ARRIVED)) {
         setState(State::DONE);
-    } else if (msg->data == "FAILED") {
+    } else if (msg->data == toString(HuskyStatus::FAILED)) {
         setState(State::FAILED);
     }
 }

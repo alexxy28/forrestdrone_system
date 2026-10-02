@@ -1,21 +1,18 @@
 
 ## 1. Architecture: split into ParrotNode / HuskyNode / SystemControlNode
 
-- [ ] Keep `Robot` / `Sensor` classes as thin domain objects (own their pub/subs
-      given a node handle, use getter and setter methods to access data from the object)
+
 - [ ] *Should the SLAM toolbox be used to create the 2D costmap for use with Nav2? or do we develop the costmap from the full terrain elevation map? Option 1 has the same sensor data being sent to two places but is specialised for this puropse, Option 2 has more data but is updated less frquently*
 
 
 - [ ] Create **`ParrotNode`** (`rclcpp::Node`):
-  - [ ] Owns a `Parrot` instance, drives it with a wall timer calling `tick()`. OR predetermined control frequency e.g. 100Hz
-  - [ ] Owns the casualty-detection pipeline (see section 2).
+  - [ ] Owns the casualty-detection pipeline 
   - [ ] Publishes confirmed casualty coordinates once detected.
   - [ ] *Use the SLAM toolbox for immediate object detection and avoidance using laser data (SLAM toolbox subscribes to laser and robot odometry then publishes a live updating 2D ocupancy grid [unknown, free, occupied wit uncertanty level]. nav2 uses occupancy grid and waypoints to move robot)*
   - [ ] Uses Nav2 (manage z height) OR other ways to move the robot.
 
 
 - [ ] Create **`HuskyNode`** (`rclcpp::Node`):
-  - [ ] Owns a `Husky` instance.
   - [ ] Receives a *planned route* (not raw terrain) from `SystemControlNode`.
   - [ ] Responsible only for executing the route via Nav2 — this is essentially `trace_husky_node.cpp`'s goal-dispatch logic (`sendGoal` / `sendNextWaypoint` / the three action callbacks) with the planning code removed.
   - [ ] *Use the SLAM toolbox for immediate object detection and avoidance using laser data (SLAM toolbox subscribes to laser and robot odometry then publishes a live updating 2D ocupancy grid [unknown, free, occupied wit uncertanty level]. nav2 uses occupancy grid and waypoints to move robot)*
@@ -35,11 +32,7 @@
 
 ## 2. Casualty / human detection pipeline (currently unfinished)
 
-`thermalCamera.hpp` / `rgbCamera.hpp` are empty stub classes, and
-`thermal_camera_subscriber.py` only visualizes frames — nothing detects a
-person yet.
 
-- [ ] Implement `ThermalCamera` and `RgbCamera` as real `Sensor` subclasses (subscribe to `/parrot1/thermal_camera` and `/parrot1/camera/image`);register both  in `Sensor::create`.
 - [ ] In `ThermalCamera`, decode mono16 frames to °C (reuse the math already proven in `thermal_camera_subscriber.py`) and threshold to a human-temperature band to get a binary mask.
 - [ ] Cluster the mask into blobs (connected components); filter by blob size to reject noise.
 - [ ] Get a 3D world position for a candidate blob: use the depth camera/point cloud at that pixel (or camera intrinsics + drone altitude) plus TF to convert to a world/odom-frame coordinate.
@@ -66,11 +59,9 @@ person yet.
 - [ ] `CMakeLists.txt` is missing executables:
   - [ ] `drone_search.cpp` is not currently built by anything.
   - [ ] Once the node split (section 1) is done, replace it with `parrot_node`, `husky_node`, and `system_control_node` executable targets, each with its own `ament_target_dependencies`.
-- [ ] `Parrot` has no `.cpp` — `parrot.hpp` is declared but never defined or compiled anywhere.
 - [ ] Migrate `drone_search.cpp`'s `lawnmower()` / `onOdom()` / `tick()` logic into `parrot.cpp`.
 - [ ] Delete `drone_search.cpp`'s duplicate local `Waypoint` struct in favour of the shared one in `dataStructures.hpp`.
 - [ ] If C++ image processing is used for detection, add `cv_bridge`, `image_transport`, and OpenCV to `package.xml` / `CMakeLists.txt` (not currently depended on).
-- [ ] `SystemControl` class is a completely empty stub — needs the mission state machine and ownership of `TerrainMap` / `TerrainPlanner` moved in from `trace_husky/`.
   - [ ] *Add running min/max scan data (used for detecting trees), running varience (Welford's M2 term)(need more than 2 data points per cell to work), convert varience into a usable confidence score.* 
   - [ ] *when interpolating unknown cells use a low confidence score or identifyer so that guesses arent used in runnung average.*
 - [ ] `thermal_camera_subscriber.py` currently lives outside any ROS package (`forrestdrone_system-pri-husky-terrain/thermal_camera_subscriber.py`, not under any `src/.../scripts`) — it can't be `ros2 run` as-is. Either fold its logic into the C++ `ThermalCamera` sensor, or move/ install it properly if it should stay a standalone debug tool.
@@ -100,7 +91,6 @@ person yet.
 2. Create stubbs for node atrchetecture.
 3. Decide if the elevation map is detailed enough (running min/max/average/varience, and cell conficence score).
 4. Fix elevation interpolation being used as first data point in subsequent scans bug.
-5. Complete RGB and IR sensor sub-calsses.
 6. Complete Parrot and Husky waypoint navigation state mnachine and logic (Each given a state and sometimes waypoints, uses internal logic to move to each point while updating states). Agree on topic and data structure to send waypoints.
 7. Complete image processing for IR camera and maybe RGB (either in parrot or in a seperate class,*reccomended in seperate class*), return if human detected, confidence and location.
 8. Move and integrate terrainMap and terrainPlanner (impliment changes if previously agreed upon).

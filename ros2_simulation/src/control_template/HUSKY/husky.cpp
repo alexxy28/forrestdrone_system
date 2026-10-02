@@ -5,13 +5,10 @@
 
 Husky::Husky(rclcpp::Node* node)
     : node_(node),
-      lidar_(std::make_unique<Lidar>(node, "/husky1/scan")),
       navClient_(rclcpp_action::create_client<NavigateToPose>(node, "/husky1/navigate_to_pose")){
 }
 
-Lidar& Husky::getLidar(){
-    return *lidar_;
-}
+
 
 bool Husky::ready() const{
     return navClient_->action_server_is_ready();

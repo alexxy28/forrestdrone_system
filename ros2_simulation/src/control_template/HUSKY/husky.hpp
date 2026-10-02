@@ -5,18 +5,14 @@
 #include <vector>
 
 #include "dataStructures.hpp"
-#include "lidar.hpp"
 
 #include <nav2_msgs/action/navigate_to_pose.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
-
-enum class HuskyStatus { IDLE, EN_ROUTE, ARRIVED, FAILED };
 
 /// The ground robot: drives a route through Nav2, one waypoint at a time.
 class Husky{
     public:
     explicit Husky(rclcpp::Node* node);
-    Lidar& getLidar();
 
     /// True once Nav2's NavigateToPose action server is up.
     bool ready() const;
@@ -37,7 +33,6 @@ class Husky{
     void resultCallback(const GoalHandle::WrappedResult& result);
 
     rclcpp::Node* node_;
-    std::unique_ptr<Lidar> lidar_;
     rclcpp_action::Client<NavigateToPose>::SharedPtr navClient_;
 
     std::vector<Waypoint> route_;

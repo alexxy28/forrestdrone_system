@@ -15,10 +15,10 @@ HuskyNode::HuskyNode()
     const auto latched = rclcpp::QoS(1).reliable().transient_local();
 
     routeSub_ = create_subscription<nav_msgs::msg::Path>(
-        "/mission/route", latched,
+        topics::ROUTE, latched,
         std::bind(&HuskyNode::routeCallback, this, std::placeholders::_1));
 
-    statusPub_ = create_publisher<std_msgs::msg::String>("/mission/husky_status", latched);
+    statusPub_ = create_publisher<std_msgs::msg::String>(topics::HUSKY_STATUS, latched);
 
     timer_ = create_wall_timer(std::chrono::milliseconds(200), std::bind(&HuskyNode::tick, this));
 
@@ -44,17 +44,14 @@ void HuskyNode::tick()
     // Publish the status only when it changes.
     const HuskyStatus status = husky_.status();
     if (lastPublished_ != status) {
-        static const char* names[] = {"IDLE", "EN_ROUTE", "ARRIVED", "FAILED"};
         std_msgs::msg::String msg;
-        msg.data = names[static_cast<int>(status)];
+        msg.data = toString(status);
         statusPub_->publish(msg);
         lastPublished_ = status;
     }
 }
 
-// ponytail: treats route coordinates as husky1_odom coordinates (the sim's
-// odometry is world-referenced for both robots); add a TF lookup from the
-// path's own frame if that stops being true.
+
 bool HuskyNode::transformRoute(const nav_msgs::msg::Path& path, std::vector<Waypoint>& out)
 {
     try {
