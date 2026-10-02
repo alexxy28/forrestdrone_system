@@ -11,14 +11,7 @@ class TerrainPlanner
 public:
     explicit TerrainPlanner(TerrainMap &terrain_map);
 
-    // Demo 2: A* on synthetic grid
-    std::vector<std::pair<double, double>>
-    planDemo2(double start_x,
-              double start_y,
-              double goal_x,
-              double goal_y);
-
-    // Demo 3: terrain-aware A*
+    // Terrain-aware A*: distance plus slope cost; empty if no route.
     std::vector<std::pair<double, double>>
     plan(double start_x,
          double start_y,

@@ -4,6 +4,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <iostream>
 #include <memory>
+#include <thread>
 
 int main(int argc, char* argv[])
 {
@@ -13,8 +14,8 @@ int main(int argc, char* argv[])
     // Create ROS node
     auto node = std::make_shared<rclcpp::Node>("lidar_test");
 
-    Husky husky(node);
-    Sensor& lidar = husky.getSensor();
+    Husky husky(node.get());
+    Lidar& lidar = husky.getLidar();
 
     std::cout << "Waiting for LiDAR scan..." << std::endl;
 
@@ -23,6 +24,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 20; i++){
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        rclcpp::spin_some(node);
         const auto& data = lidar.getData();
         if (data.empty()) {
             continue;

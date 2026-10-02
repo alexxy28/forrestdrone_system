@@ -4,16 +4,13 @@
 #include <memory>
 #include <vector>
 
-#include "robot.hpp"
-#include "sensor.hpp"
 
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
-class Parrot : public Robot{
+class Parrot{
     public:
-    explicit Parrot(std::shared_ptr<rclcpp::Node> node);
-    Sensor& getSensor();
+    explicit Parrot(rclcpp::Node* node);
 
     /// Step the search one cycle — call from the control loop.
     void tick();
@@ -27,8 +24,7 @@ class Parrot : public Robot{
                                     double height, double spacing);
     void onOdom(const nav_msgs::msg::Odometry::SharedPtr msg);
 
-    std::shared_ptr<rclcpp::Node> node_;
-    std::unique_ptr<Sensor> sensor_;
+    rclcpp::Node* node_;
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_;

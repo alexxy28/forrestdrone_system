@@ -2,8 +2,8 @@
 
 #include <functional>
 
-Lidar::Lidar(std::shared_ptr<rclcpp::Node> node, const std::string& topic)
-    : Sensor(node, SensorType::LIDAR), hasData_(false), hasInformation_(false)
+Lidar::Lidar(rclcpp::Node* node, const std::string& topic)
+    : Sensor(node, topic), hasData_(false), hasInformation_(false)
 {
     subscription_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
         topic,
@@ -50,8 +50,7 @@ const lidarInformation& Lidar::getSensorInformation() const
     return information_;
 }
 
-const std::vector<double>& Lidar::getData()
+const std::vector<double>& Lidar::getData() const
 {
-    rclcpp::spin_some(node_);
     return ranges_;
 }

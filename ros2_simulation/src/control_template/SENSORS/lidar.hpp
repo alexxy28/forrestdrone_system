@@ -10,13 +10,13 @@
 
 class Lidar : public Sensor{
     public:
-    Lidar(std::shared_ptr<rclcpp::Node> node, const std::string& topic);
+    Lidar(rclcpp::Node* node, const std::string& topic);
 
-    bool hasSensorInformation() override;
+    bool hasSensorInformation();
     bool hasData() override;
 
     const lidarInformation& getSensorInformation() const;
-    const std::vector<double>& getData() override;
+    const std::vector<double>& getData() const;
 
 
     protected:

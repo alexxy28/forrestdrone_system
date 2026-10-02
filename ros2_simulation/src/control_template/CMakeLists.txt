@@ -5,6 +5,9 @@ project(control_template)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(OpenCV REQUIRED)
 
 
 find_package(geometry_msgs REQUIRED)
@@ -17,55 +20,83 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 
 
-add_executable(lidar_test
-    main.cpp
-    lidar.cpp
-    sensor.cpp
-    robot.cpp
-    husky.cpp
+add_library(husky_lib STATIC
+    HUSKY/husky.cpp
+    SENSORS/lidar.cpp
 )
 
-ament_target_dependencies(lidar_test
+ament_target_dependencies(husky_lib
     rclcpp
+    rclcpp_action
     sensor_msgs
+    nav2_msgs
 )
 
-target_include_directories(lidar_test PUBLIC
+target_include_directories(husky_lib PUBLIC
     .
+    SENSORS
+    HUSKY
 )
+
+add_executable(lidar_test main.cpp)
+target_link_libraries(lidar_test husky_lib)
 
 install(TARGETS
     lidar_test
     DESTINATION lib/${PROJECT_NAME}
 )
 
-
-add_executable(trace_husky_node
-    trace_husky/trace_husky_node.cpp
-    trace_husky/terrain_map.cpp
-    trace_husky/terrain_planner.cpp
+add_executable(camera_test
+    camera_test.cpp
+    SENSORS/thermalCamera.cpp
+    SENSORS/rgbCamera.cpp
 )
 
-ament_target_dependencies(trace_husky_node
+ament_target_dependencies(camera_test
     rclcpp
-    rclcpp_action
     sensor_msgs
-    geometry_msgs
-    nav_msgs
-    nav2_msgs
-    action_msgs
-    tf2
-    tf2_ros
-
+    cv_bridge
+    OpenCV
 )
 
-target_include_directories(trace_husky_node PUBLIC
-    .
-    trace_husky
+target_include_directories(camera_test PUBLIC
+    SENSORS
 )
 
 install(TARGETS
-    trace_husky_node
+    camera_test
     DESTINATION lib/${PROJECT_NAME}
 )
+
+add_executable(parrot_node PARROT/ParrotNode.cpp)
+ament_target_dependencies(parrot_node rclcpp)
+
+add_executable(husky_node HUSKY/huskyNode.cpp)
+target_link_libraries(husky_node husky_lib)
+ament_target_dependencies(husky_node rclcpp nav_msgs std_msgs tf2 tf2_ros)
+
+add_library(terrain_lib STATIC
+    SYSTEM_CONTROL/terrain_map.cpp
+    SYSTEM_CONTROL/terrain_planner.cpp
+)
+ament_target_dependencies(terrain_lib sensor_msgs)
+target_include_directories(terrain_lib PUBLIC SYSTEM_CONTROL)
+
+add_executable(system_control_node SYSTEM_CONTROL/SystemControlNode.cpp)
+target_link_libraries(system_control_node terrain_lib)
+ament_target_dependencies(system_control_node rclcpp geometry_msgs nav_msgs sensor_msgs std_msgs)
+
+add_executable(planner_test SYSTEM_CONTROL/planner_test.cpp)
+target_link_libraries(planner_test terrain_lib)
+if(BUILD_TESTING)
+    add_test(NAME planner_test COMMAND planner_test)
+endif()
+
+install(TARGETS
+    parrot_node
+    husky_node
+    system_control_node
+    DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()

@@ -18,17 +18,4 @@ struct lidarInformation{
     double rangeMax;
 };
 
-enum class SensorType
-{
-    LIDAR,
-    RGB_CAMERA,
-    THERMAL_CAMERA
-};
-
-enum class RobotType
-{
-    HUSKY,
-    PARROT
-};
-
 #endif
