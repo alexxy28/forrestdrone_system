@@ -2,7 +2,7 @@
 #define DATA_STRUCTURES_HPP
 
 // Everything two or more nodes must agree on, plus every topic name.
-// Types used by one file stay in that file.
+
 
 struct Waypoint{
     double x;

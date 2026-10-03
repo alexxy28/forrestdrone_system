@@ -1,1 +1,0 @@
-rclcpp;sensor_msgs;std_msgs;cv_bridge;libopencv-dev;rclcpp_action;geometry_msgs;nav_msgs;nav2_msgs;action_msgs;tf2;tf2_ros

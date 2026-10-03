@@ -6,3 +6,12 @@ install
 log
 __pycache__/
 *.pyc
+ros2_simulation/src/control_template/build/cmake_install.cmake
+ros2_simulation/src/control_template/build/compile_commands.json
+ros2_simulation/src/control_template/build/CTestTestfile.cmake
+ros2_simulation/src/control_template/build/Makefile
+ros2_simulation/src/control_template/build/CMakeFiles/Makefile.cmake
+ros2_simulation/src/control_template/build/CMakeFiles/Makefile2
+ros2_simulation/src/control_template/build/CMakeFiles/progress.marks
+ros2_simulation/src/control_template/build/CMakeFiles/TargetDirectories.txt
+ros2_simulation/src/control_template/build/Testing/TAG
