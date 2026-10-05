@@ -64,8 +64,19 @@ target_include_directories(trace_husky_node PUBLIC
     trace_husky
 )
 
+add_executable(drone_search
+    drone_search.cpp
+)
+
+ament_target_dependencies(drone_search
+    rclcpp
+    geometry_msgs
+    nav_msgs
+)
+
 install(TARGETS
     trace_husky_node
+    drone_search
     DESTINATION lib/${PROJECT_NAME}
 )
 ament_package()

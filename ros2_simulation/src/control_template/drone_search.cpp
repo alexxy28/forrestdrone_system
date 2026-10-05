@@ -29,14 +29,16 @@ class DroneSearch : public rclcpp::Node
             cmd_topic_  = this->declare_parameter<std::string>("cmd_topic", "/parrot1/cmd_vel");
             max_speed_  = this->declare_parameter<double>("max_speed", 5.0);
             tolerance_  = this->declare_parameter<double>("goal_tolerance", 1.0);
-            target_alt_ = this->declare_parameter<double>("target_altitude", 20.0);
+            target_alt_ = this->declare_parameter<double>("target_altitude", 5.0);
 
             pub_ = this->create_publisher<geometry_msgs::msg::Twist>(cmd_topic_, 10);
             sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
                 odom_topic_, 10,
                 std::bind(&DroneSearch::onOdom, this, std::placeholders::_1));
 
-            waypoints_ = lawnmower(-10.0, -10.0, 16.0, 4.0, 16.0);
+            // terrain_demo mesh spans about 20.6 m x 21.0 m; cover it with
+            // a small edge margin and 2 m lane spacing for denser LiDAR scans.
+            waypoints_ = lawnmower(-11.0, -11.0, 22.0, 2.0, 22.0);
 
             timer_ = this->create_wall_timer(100ms, std::bind(&DroneSearch::tick, this));
 

@@ -22,11 +22,6 @@ def generate_launch_description():
         default_value='parrot1_odom',
         description='Frame in which the accumulated terrain points are published',
     )
-    odom_topic = DeclareLaunchArgument(
-        'odom_topic',
-        default_value='odometry',
-        description='Odometry topic used to confirm the drone pose',
-    )
     pointcloud_topic = DeclareLaunchArgument(
         'pointcloud_topic',
         default_value='scan/points',
@@ -46,17 +41,19 @@ def generate_launch_description():
         parameters=[{
             'robot_name': LaunchConfiguration('robot_name'),
             'map_frame': LaunchConfiguration('map_frame'),
-            'odometry_topic': LaunchConfiguration('odom_topic'),
             'pointcloud_topic': LaunchConfiguration('pointcloud_topic'),
             'output_topic': LaunchConfiguration('output_topic'),
         }],
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+        ],
         output='screen',
     )
 
     ld.add_action(namespace)
     ld.add_action(robot_name)
     ld.add_action(map_frame)
-    ld.add_action(odom_topic)
     ld.add_action(pointcloud_topic)
     ld.add_action(output_topic)
     ld.add_action(terrain_node)

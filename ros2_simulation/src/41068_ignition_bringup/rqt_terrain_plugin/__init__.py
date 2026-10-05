@@ -1,3 +1,3 @@
-from .terrain_plugin import TerrainMapPlugin
+from .terrain_plugin import RobotMotionTogglePlugin, TerrainMapPlugin
 
-__all__ = ['TerrainMapPlugin']
+__all__ = ['TerrainMapPlugin', 'RobotMotionTogglePlugin']

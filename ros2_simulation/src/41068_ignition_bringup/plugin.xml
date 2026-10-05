@@ -11,4 +11,17 @@
       <statustip>Displays the accumulated terrain cloud from the Parrot LiDAR.</statustip>
     </qtgui>
   </class>
+
+  <class name="RobotMotionTogglePlugin" type="rqt_terrain_plugin.terrain_plugin.RobotMotionTogglePlugin" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Stops and restarts a selected robot by toggling its /cmd_vel topic.
+    </description>
+    <qtgui>
+      <group>
+        <label>Robot Tools</label>
+      </group>
+      <label>Robot Motion Toggle</label>
+      <statustip>Stops or restarts a Husky or Parrot by toggling its command velocity stream.</statustip>
+    </qtgui>
+  </class>
 </library>

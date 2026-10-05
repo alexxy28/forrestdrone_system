@@ -114,8 +114,8 @@
     <turnGravityOff>true</turnGravityOff>
     <material>Gazebo/FlatBlack</material>
     <sensor type="gpu_lidar" name="lidar">
-      <!-- Tilt lidar downwards so the drone scans the ground beneath it -->
-      <pose relative_to='${prefix}base_scan'>0 0 0 0 -1.5708 0</pose>
+      <!-- Keep the scan frame upright so azimuth rotates around world vertical. -->
+      <pose relative_to='${prefix}base_scan'>0 0 0 0 0 0</pose>
       <visualize>$(arg laser_visual)</visualize>
       <topic>model/${gz_model_name}/scan</topic>
       <update_rate>3</update_rate>
@@ -123,15 +123,21 @@
       <ray>
         <scan>
           <horizontal>
-            <samples>360</samples>
+            <samples>120</samples>
             <resolution>1</resolution>
-            <min_angle>0.0</min_angle>
-            <max_angle>6.28319</max_angle>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
           </horizontal>
+          <vertical>
+            <samples>5</samples>
+            <resolution>1</resolution>
+            <min_angle>-1.5708</min_angle>
+            <max_angle>-1.1708</max_angle>
+          </vertical>
         </scan>
         <range>
           <min>0.2</min>
-          <max>40</max>
+          <max>8.0</max>
           <resolution>0.015</resolution>
         </range>
         <noise>
