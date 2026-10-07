@@ -54,7 +54,7 @@ export ROS_LOCALHOST_ONLY=1
 
 ## Running
 
-Use five terminals. In each one, first run:
+Use three terminals. In each one, first run:
 
 ```bash
 cd ros2_simulation
@@ -79,15 +79,17 @@ ros2 run 41068_ignition_bringup terrain_map_builder.py --ros-args \
 Run the script directly instead of through `41068_terrain_map.launch.py`. The launch file
 does not remap TF, so the builder would not see the Parrot's transforms.
 
-3 to 5. The three nodes
+3. The three nodes
 
 ```bash
-ros2 run control_template system_control_node --ros-args -p use_sim_time:=true
-ros2 run control_template husky_node          --ros-args -p use_sim_time:=true
-ros2 run control_template parrot_node         --ros-args -p use_sim_time:=true
+ros2 launch 41068_ignition_bringup control.launch.py
 ```
 
-There is no launch file for these yet.
+To start only some of them, pass `nodes` (any of `system_control`, `husky`, `parrot`):
+
+```bash
+ros2 launch 41068_ignition_bringup control.launch.py nodes:=husky,parrot
+```
 
 ## Node reference
 
