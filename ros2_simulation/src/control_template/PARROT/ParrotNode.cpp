@@ -16,7 +16,7 @@ const char* toString(int state)
 ParrotNode::ParrotNode()
     : Node("parrot_node"),
       parrot_(this,
-              declare_parameter<double>("max_speed", 5.0),
+              declare_parameter<double>("max_speed", 1.5),
               declare_parameter<double>("goal_tolerance", 1.0),
               declare_parameter<double>("target_altitude", 20.0))
 {
