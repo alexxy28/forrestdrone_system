@@ -22,6 +22,13 @@
 // RViz: /parrot1/scan (LaserScan), /parrot1/obstacle_markers (MarkerArray)
 //   green cylinders = trees, orange spheres = nearest point of a slope/hill
 
+// parrot.cpp — the drone: climb, then fly the waypoints mission control sends,
+// steering around trees and slopes seen by the lidar.
+// Run by ParrotNode: WAITING_FOR_ODOM -> CLIMBING -> IDLE -> SEARCHING -> HOLDING
+//
+// RViz: /parrot1/scan (LaserScan), /parrot1/obstacle_markers (MarkerArray)
+//   green cylinders = trees, orange spheres = nearest point of a slope/hill
+
 #include "parrot.hpp"
 
 #include <algorithm>
@@ -57,17 +64,6 @@ Parrot::Parrot(rclcpp::Node* node, double maxSpeed, double tolerance, double tar
     takeoff_speed_ = node_->declare_parameter<double>("takeoff_speed", 0.5);   // m/s up
     takeoff_time_  = node_->declare_parameter<double>("takeoff_time", 4.0);    // s
 
-    // --- zig-zag search area (world frame, m): bottom-left corner + size ---
-    double x0      = node_->declare_parameter<double>("area_x0", -11.0);
-    double y0      = node_->declare_parameter<double>("area_y0", -11.0);
-    double width   = node_->declare_parameter<double>("area_width", 22.0);
-    double height  = node_->declare_parameter<double>("area_height", 22.0);
-    double spacing = node_->declare_parameter<double>("lane_spacing", 4.0);
-
-    // --- optional single point instead of the zig-zag ---
-    double goto_x = node_->declare_parameter<double>("goto_x", std::nan(""));
-    double goto_y = node_->declare_parameter<double>("goto_y", std::nan(""));
-
     // --- lidar ---
     cluster_gap_    = node_->declare_parameter<double>("cluster_gap", 0.5);     // gap that separates two objects
     min_points_     = node_->declare_parameter<int>("min_cluster_points", 3);   // smaller = noise
@@ -89,20 +85,6 @@ Parrot::Parrot(rclcpp::Node* node, double maxSpeed, double tolerance, double tar
     scan_sub_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
         scan_topic, rclcpp::SensorDataQoS(),
         std::bind(&Parrot::onScan, this, std::placeholders::_1));
-
-    if (std::isfinite(goto_x) && std::isfinite(goto_y)) {
-        waypoints_ = {{goto_x, goto_y}};
-        RCLCPP_INFO(node_->get_logger(), "GOTO mode: flying to (%.1f, %.1f)", goto_x, goto_y);
-    } else {
-        waypoints_ = zigzag(x0, y0, width, height, spacing);
-        RCLCPP_INFO(node_->get_logger(),
-                    "Zig-zag search: x %.1f..%.1f, y %.1f..%.1f, lanes %.1f m apart, %zu waypoints",
-                    x0, x0 + width, y0, y0 + height, spacing, waypoints_.size());
-        for (size_t i = 0; i < waypoints_.size(); i++) {
-            RCLCPP_INFO(node_->get_logger(), "  wp %2zu: (%6.1f, %6.1f)",
-                        i + 1, waypoints_[i].x, waypoints_[i].y);
-        }
-    }
 
     if (timedClimb()) {
         RCLCPP_INFO(node_->get_logger(), "Height: timed climb, %.1f s at %.1f m/s (z not used)",
@@ -131,28 +113,20 @@ bool Parrot::searchComplete() const
     return index_ >= waypoints_.size();
 }
 
-// ================= search pattern =================
-// Lanes run along x and step up in y. The last lane sits exactly on the
-// top edge so the whole area is covered.
-std::vector<Parrot::Waypoint> Parrot::zigzag(double x0, double y0, double width,
-                                             double height, double spacing) const
+// ================= waypoints from mission control =================
+void Parrot::setWaypoints(const std::vector<std::pair<double, double>>& points)
 {
-    std::vector<Waypoint> pts;
-    int lanes = static_cast<int>(std::ceil(height / spacing)) + 1;
-    for (int i = 0; i < lanes; i++) {
-        double y = std::min(y0 + i * spacing, y0 + height);
-        if (i % 2 == 0) {
-            pts.push_back({x0, y});
-            pts.push_back({x0 + width, y});
-        } else {
-            pts.push_back({x0 + width, y});
-            pts.push_back({x0, y});
-        }
-        if (y >= y0 + height) {
-            break;
-        }
+    waypoints_.clear();
+    for (const auto& p : points) {
+        waypoints_.push_back({p.first, p.second});
     }
-    return pts;
+    index_ = 0;
+    progress_index_ = std::numeric_limits<size_t>::max();
+    RCLCPP_INFO(node_->get_logger(), "New mission: %zu waypoints", waypoints_.size());
+    for (size_t i = 0; i < waypoints_.size(); i++) {
+        RCLCPP_INFO(node_->get_logger(), "  wp %2zu: (%6.1f, %6.1f)",
+                    i + 1, waypoints_[i].x, waypoints_[i].y);
+    }
 }
 
 // ================= odometry =================

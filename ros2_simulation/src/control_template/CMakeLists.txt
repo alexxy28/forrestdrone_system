@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.8)
 project(control_template)
 
 find_package(ament_cmake REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -22,6 +23,7 @@ target_include_directories(parrot_node PRIVATE .)
 ament_target_dependencies(parrot_node rclcpp geometry_msgs nav_msgs
     sensor_msgs
     visualization_msgs
+    std_msgs
 )
 
 add_executable(husky_node
@@ -41,7 +43,9 @@ ament_target_dependencies(terrain_lib sensor_msgs)
 add_executable(system_control_node SYSTEM_CONTROL/systemControlNode.cpp)
 target_include_directories(system_control_node PRIVATE .)
 target_link_libraries(system_control_node terrain_lib)
-ament_target_dependencies(system_control_node rclcpp geometry_msgs nav_msgs sensor_msgs std_msgs)
+ament_target_dependencies(system_control_node rclcpp geometry_msgs nav_msgs sensor_msgs std_msgs
+    std_srvs
+)
 
 install(TARGETS
     parrot_node

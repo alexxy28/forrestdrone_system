@@ -10,10 +10,20 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
-/// Owns the mission: terrain map, route planning, and the mission state.
+/// Owns the mission: tells the drone where to search, then plans the Husky's
+/// route to the casualty over the terrain map.
+///
+/// Drone control:
+///   ros2 service call /mission/start std_srvs/srv/Trigger   -> zig-zag over the search area
+///   ros2 service call /mission/stop  std_srvs/srv/Trigger   -> drone stops and hovers
+///   RViz "Publish Point" click (parrot1 window)              -> search a small box around that spot
 class SystemControlNode : public rclcpp::Node{
     public:
     SystemControlNode();
@@ -29,6 +39,17 @@ class SystemControlNode : public rclcpp::Node{
     void tryPlan();
     void setState(State state);
 
+    // ---- drone tasking ----
+    void startSearch(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+                     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+    void stopDrone(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+                   std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+    void clickedPointCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg);
+    void droneStatusCallback(const std_msgs::msg::String::SharedPtr msg);
+    void sendDronePath(const std::vector<std::pair<double, double>>& points, const std::string& reason);
+    std::vector<std::pair<double, double>> zigzag(double x0, double y0, double width,
+                                                  double height, double spacing) const;
+
     TerrainMap terrainMap_;
     TerrainPlanner terrainPlanner_;
 
@@ -40,6 +61,13 @@ class SystemControlNode : public rclcpp::Node{
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr statePub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
+    // ---- drone tasking ----
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr dronePathPub_;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr droneStatusSub_;
+    rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr clickedSub_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr startSrv_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stopSrv_;
+
     State state_{State::SEARCHING};
     int routeStep_;
 
@@ -48,6 +76,13 @@ class SystemControlNode : public rclcpp::Node{
     std::string terrainFrame_;
     double huskyX_{0.0}, huskyY_{0.0};
     double casualtyX_{0.0}, casualtyY_{0.0};
+
+    // ---- drone tasking ----
+    double areaX0_{-17.0}, areaY0_{-11.0}, areaWidth_{28.0}, areaHeight_{22.0};
+    double laneSpacing_{4.0};
+    double clickBoxSize_{8.0};
+    std::string missionFrame_{"world"};
+    std::string droneStatus_{"UNKNOWN"};
 };
 
 #endif

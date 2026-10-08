@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <limits>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "dataStructures.hpp"
@@ -14,8 +15,9 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
-/// The drone: climbs, then flies a zig-zag search over an area while steering
-/// around trees and slopes seen by its lidar.
+/// The drone: climbs, then flies the waypoints mission control gives it while
+/// steering around trees and slopes seen by its lidar. It has no search
+/// pattern of its own; mission control decides where it goes.
 ///
 /// Height: by default a TIMED climb (takeoff_speed for takeoff_time seconds),
 /// because the z reading isn't reliable on this terrain. Run with
@@ -31,8 +33,11 @@ bool ready() const;
     /// z mode: true while within 0.5 m of the target altitude.
 bool atAltitude() const;
 
-    /// True once every waypoint of the search pattern has been reached or skipped.
+    /// True once every waypoint has been reached or skipped (also true when there are none).
 bool searchComplete() const;
+
+    /// Replace the waypoints to fly, starting from the first one.
+void setWaypoints(const std::vector<std::pair<double, double>>& points);
 
     /// Publish a vertical-only climb command.
 void climb();
@@ -55,8 +60,6 @@ private:
         double width;     // width of the lidar cluster (m)
     };
 
-std::vector<Waypoint> zigzag(double x0, double y0, double width,
-                             double height, double spacing) const;
 void onOdom(const nav_msgs::msg::Odometry::SharedPtr msg);
 void onScan(const sensor_msgs::msg::LaserScan::SharedPtr msg);
 double altitudeCommand() const;
@@ -90,7 +93,7 @@ double slope_radius_{3.0};
 double avoid_gain_{2.0};
 int min_points_{3};
 
-    // ---- search state ----
+    // ---- waypoint state ----
 std::vector<Waypoint> waypoints_;
 size_t index_{0};
 double climb_start_s_{-1.0};
