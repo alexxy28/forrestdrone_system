@@ -5,11 +5,7 @@
 //   source ~/rs1_ws/install/setup.bash
 //   ros2 launch 41068_ignition_bringup 41068_ignition.launch.py world:=terrain_demo husky:=true parrot:=true rviz:=true
 //
-// Terminal 2 (heat camera):
-//   source ~/rs1_ws/install/setup.bash
-//   python3 ~/rs1_ws/src/forrestdrone_system/thermal_camera_subscriber.py
-//
-// Terminal 3 (build + run, rebuild after every edit):
+// Terminal 2 (build + run, rebuild after every edit):
 //   cd ~/rs1_ws
 //   colcon build --symlink-install --packages-select control_template
 //   source install/setup.bash

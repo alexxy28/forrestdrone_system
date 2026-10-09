@@ -34,6 +34,8 @@ inline constexpr char STATE[]        = "/mission/state";         // std_msgs/Str
 inline constexpr char PARROT_ODOM[]    = "/parrot1/odometry";        // nav_msgs/Odometry, raw Gazebo, sim -> parrot
 inline constexpr char PARROT_CMD_VEL[] = "/parrot1/cmd_vel";         // geometry_msgs/Twist, parrot -> sim
 inline constexpr char PARROT_TERRAIN[] = "/parrot1/terrain_points";  // sensor_msgs/PointCloud2, terrain_map_builder -> control
+inline constexpr char PARROT_THERMAL[] = "/parrot1/thermal_camera";  // sensor_msgs/Image, sim -> parrot
+inline constexpr char PARROT_DEPTH[]   = "/parrot1/camera/depth/image";  // sensor_msgs/Image, sim -> parrot
 
 // Husky: provided by the simulator and Nav2.
 inline constexpr char HUSKY_ODOM[]      = "/husky1/odometry";          // nav_msgs/Odometry, raw Gazebo, sim -> control

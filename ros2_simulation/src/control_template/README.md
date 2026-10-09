@@ -21,8 +21,8 @@ Target platform: ROS 2 Humble, Ignition Gazebo Fortress, C++17.
   and tracks the Husky.
 - Terrain map and planner: partly working. The code runs, but found no route when tested.
   See [Known issues](#known-issues).
-- Casualty detection: not built. Nothing publishes a casualty yet; it has to be published
-  by hand.
+- Casualty detection: integrated into `parrot_node`. Thermal blobs are matched with depth
+  and raw odometry, confirmed over multiple frames, then published to mission control.
 - Parrot reacting to the mission: not built. The Parrot does not listen to the mission
   state and never stops its search early.
 
@@ -100,9 +100,16 @@ Source: [ParrotNode.cpp](PARROT/ParrotNode.cpp), [parrot.cpp](PARROT/parrot.cpp)
 
 - Subscribes to `/parrot1/odometry` (`nav_msgs/Odometry`)
 - Publishes `/parrot1/cmd_vel` (`geometry_msgs/Twist`)
+- Subscribes to `/parrot1/thermal_camera` and `/parrot1/camera/depth/image`
+- Publishes confirmed detections on `/mission/casualty` (`geometry_msgs/PointStamped`)
 
 The control loop runs every 100 ms. The state is worked out fresh on every cycle, so a
 drone that drifts off altitude during the search goes back to climbing.
+
+Thermal detection converts 16-bit Kelvin-centikelvin images to Celsius, extracts hot
+connected components, rejects blobs without valid depth, and converts the best candidate
+to the odometry frame. Three spatially consistent frames are required by default. Set
+`show_camera_windows:=true` to enable the OpenCV thermal and depth diagnostics.
 
 States:
 
@@ -304,8 +311,9 @@ The full ordered test list is in [ToDo.md](ToDo.md).
 
 ## Known issues
 
-- No casualty publisher. Detection from the thermal camera is not written. Until it is,
-  the mission stays in `SEARCHING` unless a casualty is published by hand.
+- Thermal localization assumes the thermal and depth images are pixel-aligned and uses
+  configured camera mounting offsets rather than TF. These assumptions match the current
+  Parrot simulation model but must be updated if its sensors move independently.
 - The Parrot ignores the mission. `/mission/state` has no subscriber. The drone flies its
   whole pattern and holds, whatever the mission state is.
 - The planner finds no route. The Parrot's lidar scans a flat horizontal plane, and the

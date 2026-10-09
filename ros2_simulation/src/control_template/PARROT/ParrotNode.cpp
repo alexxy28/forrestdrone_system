@@ -25,7 +25,8 @@ ParrotNode::ParrotNode()
 parrot_(this,
 declare_parameter<double>("max_speed", 1.5),
 declare_parameter<double>("goal_tolerance", 1.0),
-declare_parameter<double>("target_altitude", 20.0))
+declare_parameter<double>("target_altitude", 20.0)),
+thermalCamera_(this)
 {
     // Latched both ways, so it doesn't matter which node starts first.
 const auto latched = rclcpp::QoS(1).reliable().transient_local();
@@ -41,6 +42,21 @@ statusPub_ = create_publisher<std_msgs::msg::String>(statusTopic, latched);
 timer_ = create_wall_timer(std::chrono::milliseconds(100), std::bind(&ParrotNode::tick, this));
 
 RCLCPP_INFO(get_logger(), "parrot_node started, waiting for missions on %s", pathTopic.c_str());
+}
+
+std::vector<Casualty> ParrotNode::getCasualties() const
+{
+    return thermalCamera_.getCasualties();
+}
+
+bool ParrotNode::confirmCasualty(std::size_t index)
+{
+    return thermalCamera_.confirmCasualty(index);
+}
+
+bool ParrotNode::denyCasualty(std::size_t index)
+{
+    return thermalCamera_.denyCasualty(index);
 }
 
 void ParrotNode::onMissionPath(const nav_msgs::msg::Path::SharedPtr msg)
@@ -96,12 +112,4 @@ std_msgs::msg::String msg;
 msg.data = toString(static_cast<int>(state));
 statusPub_->publish(msg);
 RCLCPP_INFO(get_logger(), "State: %s", msg.data.c_str());
-}
-
-int main(int argc, char* argv[])
-{
-rclcpp::init(argc, argv);
-rclcpp::spin(std::make_shared<ParrotNode>());
-rclcpp::shutdown();
-return 0;
 }

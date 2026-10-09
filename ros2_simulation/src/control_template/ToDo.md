@@ -6,8 +6,8 @@
 
 
 - [ ] **`ParrotNode`**:
-  - [ ] Owns the casualty-detection pipeline 
-  - [ ] Publishes confirmed casualty coordinates once detected.
+  - [x] Owns the casualty-detection pipeline
+  - [x] Publishes confirmed casualty coordinates once detected.
   - [ ] Subscribes to `/mission/state` and stops its search when the mission moves on.
   - [ ] *Use the SLAM toolbox for immediate object detection and avoidance using laser data (SLAM toolbox subscribes to laser and robot odometry then publishes a live updating 2D ocupancy grid [unknown, free, occupied wit uncertanty level]. nav2 uses occupancy grid and waypoints to move robot)*
 
@@ -20,12 +20,12 @@
 ## 2. Casualty / human detection pipeline (currently unfinished)
 
 
-- [ ] Create a `ThermalCamera` class; decode mono16 frames to °C (reuse the math already proven in `thermal_camera_subscriber.py`) and threshold to a human-temperature band to get a binary mask.
-- [ ] Cluster the mask into blobs (connected components); filter by blob size to reject noise.
-- [ ] Get a 3D world position for a candidate blob: use the depth camera/point cloud at that pixel (or camera intrinsics + drone altitude) plus TF to convert to a world/odom-frame coordinate.
+- [x] Create a `ThermalCamera` class; decode mono16 frames to °C (reuse the math already proven in `thermal_camera_subscriber.py`) and threshold to a human-temperature band to get a binary mask.
+- [x] Cluster the mask into blobs (connected components); filter by blob size to reject noise.
+- [x] Get a 3D world position for a candidate blob using the aligned depth image and raw world-coordinate odometry.
 - [ ] Cross-check the RGB image at the same region with a simple person-shape/heuristic check (Most probably unnecessary).
-- [ ] Debounce over a few frames before confirming (avoid one noisy frame triggering a false rescue).
-- [ ] Wire into `ParrotNode`: on confirmed detection, end the search pattern and publish the coordinate on `/mission/casualty`.
+- [x] Debounce over a few frames before confirming (avoid one noisy frame triggering a false rescue).
+- [x] Wire into `ParrotNode`: on confirmed detection, publish the coordinate on `/mission/casualty`; mission control replaces the search path with a hold point.
 
 ---
 
@@ -43,8 +43,8 @@
 
 ## 4. Build / code tasks in `control_template`
 
-- [ ] If C++ image processing is used for detection, add `cv_bridge`, `image_transport`, and OpenCV to `package.xml` / `CMakeLists.txt` (not currently depended on).
-- [ ] `thermal_camera_subscriber.py` currently lives outside any ROS package (`forrestdrone_system-pri-husky-terrain/thermal_camera_subscriber.py`, not under any `src/.../scripts`) — it can't be `ros2 run` as-is. Either fold its logic into the C++ `ThermalCamera` sensor, or move/ install it properly if it should stay a standalone debug tool.
+- [x] Add `cv_bridge` and OpenCV to `package.xml` / `CMakeLists.txt` for C++ image processing. (`image_transport` is unnecessary because this component consumes raw ROS image topics directly.)
+- [x] Fold `thermal_camera_subscriber.py`'s processing into the C++ `ThermalCamera` component. The Python file remains a standalone debug/prototype tool.
 
 ---
 
