@@ -101,7 +101,7 @@ Source: [ParrotNode.cpp](PARROT/ParrotNode.cpp), [parrot.cpp](PARROT/parrot.cpp)
 - Subscribes to `/parrot1/odometry` (`nav_msgs/Odometry`)
 - Publishes `/parrot1/cmd_vel` (`geometry_msgs/Twist`)
 - Subscribes to `/parrot1/thermal_camera` and `/parrot1/camera/depth/image`
-- Publishes confirmed detections on `/mission/casualty` (`geometry_msgs/PointStamped`)
+- Publishes user-confirmed detections on `/mission/casualty` (`geometry_msgs/PointStamped`)
 
 The control loop runs every 100 ms. The state is worked out fresh on every cycle, so a
 drone that drifts off altitude during the search goes back to climbing.
@@ -110,6 +110,11 @@ Thermal detection converts 16-bit Kelvin-centikelvin images to Celsius, extracts
 connected components, rejects blobs without valid depth, and converts the best candidate
 to the odometry frame. Three spatially consistent frames are required by default. Set
 `show_camera_windows:=true` to enable the OpenCV thermal and depth diagnostics.
+
+When a candidate is detected, the Parrot pauses its patrol and flies to the candidate
+for review. In the Parrot node's terminal, use `list`, then `confirm <index>` or
+`deny <index>`. Confirming sends its position to mission control, which plans and sends
+a route to the Husky. Either decision resumes the Parrot's saved patrol route.
 
 States:
 

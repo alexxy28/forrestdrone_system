@@ -109,6 +109,16 @@ bool Parrot::searchComplete() const
     return index_ >= waypoints_.size();
 }
 
+std::vector<std::pair<double, double>> Parrot::remainingWaypoints() const
+{
+    std::vector<std::pair<double, double>> remaining;
+    remaining.reserve(waypoints_.size() - std::min(index_, waypoints_.size()));
+    for (size_t i = index_; i < waypoints_.size(); ++i) {
+        remaining.emplace_back(waypoints_[i].x, waypoints_[i].y);
+    }
+    return remaining;
+}
+
 // ================= waypoints from mission control =================
 void Parrot::setWaypoints(const std::vector<std::pair<double, double>>& points)
 {

@@ -132,9 +132,6 @@ void SystemControlNode::casualtyCallback(const geometry_msgs::msg::PointStamped:
     casualtyY_ = msg->point.y;
     RCLCPP_INFO(get_logger(), "Casualty at (%.2f, %.2f)", casualtyX_, casualtyY_);
 
-    // Stop the search and keep the drone overhead as a spotter for the Husky.
-    sendDronePath({{casualtyX_, casualtyY_}}, "hold over casualty");
-
     setState(State::PLANNING);
 }
 

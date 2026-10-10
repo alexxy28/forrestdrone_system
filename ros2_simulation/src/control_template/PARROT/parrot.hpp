@@ -34,7 +34,12 @@ bool ready() const;
 bool atAltitude() const;
 
     /// True once every waypoint has been reached or skipped (also true when there are none).
-bool searchComplete() const;
+    bool searchComplete() const;
+    std::vector<std::pair<double, double>> remainingWaypoints() const;
+
+    /// Current drone pose in world frame.
+double x() const { return x_; }
+double y() const { return y_; }
 
     /// Replace the waypoints to fly, starting from the first one.
 void setWaypoints(const std::vector<std::pair<double, double>>& points);
