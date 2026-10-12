@@ -1,3 +1,0 @@
-opencv-python>=4.5
-numpy
-# Note: ROS2 (rclpy) is provided by your ROS installation; do not install via pip for a ROS-managed environment.

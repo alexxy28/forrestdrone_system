@@ -5,11 +5,7 @@
 //   source ~/rs1_ws/install/setup.bash
 //   ros2 launch 41068_ignition_bringup 41068_ignition.launch.py world:=terrain_demo husky:=true parrot:=true rviz:=true
 //
-// Terminal 2 (heat camera):
-//   source ~/rs1_ws/install/setup.bash
-//   python3 ~/rs1_ws/src/forrestdrone_system/thermal_camera_subscriber.py
-//
-// Terminal 3 (build + run, rebuild after every edit):
+// Terminal 2 (build + run, rebuild after every edit):
 //   cd ~/rs1_ws
 //   colcon build --symlink-install --packages-select control_template
 //   source install/setup.bash
@@ -111,6 +107,16 @@ bool Parrot::atAltitude() const
 bool Parrot::searchComplete() const
 {
     return index_ >= waypoints_.size();
+}
+
+std::vector<std::pair<double, double>> Parrot::remainingWaypoints() const
+{
+    std::vector<std::pair<double, double>> remaining;
+    remaining.reserve(waypoints_.size() - std::min(index_, waypoints_.size()));
+    for (size_t i = index_; i < waypoints_.size(); ++i) {
+        remaining.emplace_back(waypoints_[i].x, waypoints_[i].y);
+    }
+    return remaining;
 }
 
 // ================= waypoints from mission control =================

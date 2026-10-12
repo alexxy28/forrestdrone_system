@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.8)
 project(control_template)
 
 find_package(ament_cmake REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -16,15 +18,19 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 
 add_executable(parrot_node
+    main.cpp
     PARROT/ParrotNode.cpp
+    PARROT/ThermalCamera.cpp
     PARROT/parrot.cpp
 )
 target_include_directories(parrot_node PRIVATE .)
 ament_target_dependencies(parrot_node rclcpp geometry_msgs nav_msgs
+    cv_bridge
     sensor_msgs
     visualization_msgs
     std_msgs
 )
+target_link_libraries(parrot_node ${OpenCV_LIBRARIES})
 
 add_executable(husky_node
     HUSKY/huskyNode.cpp
