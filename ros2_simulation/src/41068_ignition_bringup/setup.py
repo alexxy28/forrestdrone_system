@@ -11,6 +11,7 @@ setup(
     entry_points={
         'rqt_gui.plugins': [
             'TerrainMap = rqt_terrain_plugin.terrain_plugin:TerrainMapPlugin',
+            'RobotMotionToggle = rqt_terrain_plugin.terrain_plugin:RobotMotionTogglePlugin',
         ],
     },
 )

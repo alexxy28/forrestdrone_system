@@ -37,11 +37,6 @@ def generate_launch_description():
         description='Frame in which the accumulated terrain points are published',
     ))
     ld.add_action(DeclareLaunchArgument(
-        'odom_topic',
-        default_value='odometry',
-        description='Odometry topic used to confirm the drone pose',
-    ))
-    ld.add_action(DeclareLaunchArgument(
         'pointcloud_topic',
         default_value='scan/points',
         description='LiDAR point cloud topic to accumulate',
@@ -60,10 +55,13 @@ def generate_launch_description():
         parameters=[{
             'robot_name': LaunchConfiguration('robot_name'),
             'map_frame': LaunchConfiguration('map_frame'),
-            'odometry_topic': LaunchConfiguration('odom_topic'),
             'pointcloud_topic': LaunchConfiguration('pointcloud_topic'),
             'output_topic': LaunchConfiguration('output_topic'),
         }],
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+        ],
         output='screen',
     ))
 

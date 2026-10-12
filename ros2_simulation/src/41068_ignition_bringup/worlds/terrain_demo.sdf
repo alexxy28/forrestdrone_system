@@ -260,7 +260,7 @@
           <plugin
             filename="ignition-gazebo-thermal-system"
             name="gz::sim::systems::Thermal">
-            <temperature>390.0</temperature>
+            <temperature>290.0</temperature>
           </plugin>
         </visual>
         <visual name="canopy_visual">
@@ -277,7 +277,7 @@
           <plugin
             filename="ignition-gazebo-thermal-system"
             name="gz::sim::systems::Thermal">
-            <temperature>390.0</temperature>
+            <temperature>290.0</temperature>
           </plugin>
         </visual>
       </link>
