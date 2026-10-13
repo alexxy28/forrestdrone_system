@@ -302,6 +302,31 @@ void Parrot::stop()
     publish(0.0, 0.0, 0.0, 0.0);
 }
 
+// ================= stop button =================
+// Holds in place and remembers when the hold started.
+void Parrot::hold()
+{
+    stop();
+    if (hold_start_s_ < 0.0) {
+        hold_start_s_ = node_->now().seconds();
+    }
+}
+
+// Push the climb and stuck timers forward by however long we were held,
+// so time spent stopped doesn't count as climbing or as "no progress".
+void Parrot::catchUpAfterHold(double now_s)
+{
+    if (hold_start_s_ < 0.0) {
+        return;
+    }
+    double held = now_s - hold_start_s_;
+    if (climb_start_s_ >= 0.0) {
+        climb_start_s_ += held;
+    }
+    last_progress_s_ += held;
+    hold_start_s_ = -1.0;
+}
+
 /// Vertical speed that holds the target altitude (z mode only; 0 in timed mode).
 double Parrot::altitudeCommand() const
 {
@@ -318,6 +343,7 @@ void Parrot::climb()
         return;
     }
     double now_s = node_->now().seconds();
+    catchUpAfterHold(now_s);
     if (climb_start_s_ < 0.0) {
         climb_start_s_ = now_s;
         RCLCPP_INFO(node_->get_logger(), "Taking off for %.1f s at %.1f m/s",
@@ -363,6 +389,7 @@ void Parrot::flyToWaypoint()
     double dy = waypoints_[index_].y - y_;
     double distance = std::hypot(dx, dy);
     double now_s = node_->now().seconds();
+    catchUpAfterHold(now_s);
 
     // ---- reached ----
     if (distance < tolerance_) {

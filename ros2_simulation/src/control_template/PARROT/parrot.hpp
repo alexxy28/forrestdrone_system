@@ -53,6 +53,8 @@ void flyToWaypoint();
     /// Publish a zero Twist so the drone holds position.
 void stop();
 
+void hold();
+
 private:
     struct Waypoint { double x, y; };
 
@@ -72,6 +74,7 @@ Obstacle makeObstacle(double bx, double by, double width) const;
 void addRepulsion(const Obstacle & o, double radius, double & vx, double & vy) const;
 void publishMarkers(const std_msgs::msg::Header & header);
 void publish(double vx, double vy, double vz, double wz);
+void catchUpAfterHold(double now_s);
 bool timedClimb() const { return takeoff_time_ > 0.0; }
 
 rclcpp::Node* node_;
@@ -106,6 +109,7 @@ bool climbed_{false};
 size_t progress_index_{std::numeric_limits<size_t>::max()};
 double best_distance_{0.0};
 double last_progress_s_{0.0};
+double hold_start_s_{-1.0};   // when the current hold began, -1 = not holding
 
     // ---- sensor state ----
 std::vector<Obstacle> trees_;

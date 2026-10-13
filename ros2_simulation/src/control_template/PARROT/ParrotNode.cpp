@@ -12,9 +12,9 @@
 
 namespace {
 
-const char* toString(int state)
+const char* toString(int state) 
 {
-static const char* names[] = {"WAITING_FOR_ODOM", "CLIMBING", "IDLE", "SEARCHING", "HOLDING"};
+static const char* names[] = {"WAITING_FOR_ODOM", "CLIMBING", "IDLE", "SEARCHING", "HOLDING", "PAUSED"};
 return names[state];
 }
 
@@ -62,6 +62,12 @@ pathSub_ = create_subscription<nav_msgs::msg::Path>(
     std::bind(&ParrotNode::onMissionPath, this, std::placeholders::_1));
 statusPub_ = create_publisher<std_msgs::msg::String>(statusTopic, latched);
 casualtyPub_ = create_publisher<geometry_msgs::msg::PointStamped>(topics::CASUALTY, latched);
+
+// Stop button: true = freeze in place, false = carry on.
+const std::string stopTopic = declare_parameter<std::string>("stop_topic", "/parrot1/estop");
+stopSub_ = create_subscription<std_msgs::msg::Bool>(
+    stopTopic, 10,
+    std::bind(&ParrotNode::onStop, this, std::placeholders::_1));
 
 timer_ = create_wall_timer(std::chrono::milliseconds(100), std::bind(&ParrotNode::tick, this));
 
@@ -119,6 +125,19 @@ std::optional<Casualty> ParrotNode::selectCasualtyForVerification() const
     return chooseNearestCasualty(thermalCamera_.getCasualties(), parrot_.x(), parrot_.y());
 }
 
+void ParrotNode::onStop(const std_msgs::msg::Bool::SharedPtr msg)
+{
+    if (msg->data == stopped_) {
+        return;   // no change, don't spam the log
+    }
+    stopped_ = msg->data;
+    if (stopped_) {
+        RCLCPP_WARN(get_logger(), "STOP pressed: holding position");
+    } else {
+        RCLCPP_INFO(get_logger(), "STOP released: resuming");
+    }
+}
+
 void ParrotNode::tick()
 {
     // Worked out fresh each cycle: a drone that drifts off altitude goes back to climbing.
@@ -126,6 +145,15 @@ if (!parrot_.ready()) {
 setState(State::WAITING_FOR_ODOM);
 return;
     }
+
+    // Stop button beats everything. Nothing gets reset, so on release the checks
+    // below pick up where the drone was: climb, casualty check or search.
+    if (stopped_) {
+        setState(State::PAUSED);
+        parrot_.hold();
+        return;
+    }
+
 if (!parrot_.atAltitude()) {
 setState(State::CLIMBING);
 parrot_.climb();
