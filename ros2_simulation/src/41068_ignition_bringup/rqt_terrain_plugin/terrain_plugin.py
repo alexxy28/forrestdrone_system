@@ -318,7 +318,7 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if not clean_name or self._node is None:
             return None
         if clean_name not in self._publishers:
-            self._publishers[clean_name] = self._node.create_publisher(Bool, f'/{clean_name}/estop', 10)
+            self._publishers[clean_name] = self._node.create_publisher(Bool, f'mission_control/{clean_name}/estop', 10)
         return self._publishers[clean_name]
 
     def _ensure_subscription(self, robot_name: str):
@@ -328,7 +328,7 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if clean_name not in self._subscriptions:
             self._subscriptions[clean_name] = self._node.create_subscription(
                 Bool,
-                f'/{clean_name}/estop',
+                f'mission_control/{clean_name}/estop',
                 lambda msg, name=clean_name: self._estop_state_cb(name, msg),
                 10,
             )
