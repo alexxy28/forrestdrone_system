@@ -15,16 +15,18 @@ from std_msgs.msg import Bool
 class TerrainMapWidget(QtWidgets.QWidget):
     # Grid parameters match TerrainMap in control_template/trace_husky.
     RESOLUTION = 0.5
-    SIZE_X = 24.0
-    SIZE_Y = 24.0
+    SIZE_X = 40.0
+    SIZE_Y = 40.0
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName('TerrainMapWidget')
         self.setWindowTitle('Terrain Map')
         self.resize(800, 600)
-        self.grid_width = int(self.SIZE_X / self.RESOLUTION)
-        self.grid_height = int(self.SIZE_Y / self.RESOLUTION)
+        self.half_cells_x = int(np.ceil(self.SIZE_X / (2.0 * self.RESOLUTION)))
+        self.half_cells_y = int(np.ceil(self.SIZE_Y / (2.0 * self.RESOLUTION)))
+        self.grid_width = 2 * self.half_cells_x + 1
+        self.grid_height = 2 * self.half_cells_y + 1
         # Elevation per cell, indexed [gy, gx]; NaN means no data.
         self._elevation: np.ndarray | None = None
         self._height_min = 0.0
@@ -118,8 +120,12 @@ class TerrainMapWidget(QtWidgets.QWidget):
 
         finite = np.isfinite(xyz).all(axis=1)
         xyz = xyz[finite]
-        gx = np.floor((xyz[:, 0] + self.SIZE_X / 2.0) / self.RESOLUTION).astype(np.int64)
-        gy = np.floor((xyz[:, 1] + self.SIZE_Y / 2.0) / self.RESOLUTION).astype(np.int64)
+        gx = np.floor(
+            xyz[:, 0] / self.RESOLUTION + self.half_cells_x + 0.5
+        ).astype(np.int64)
+        gy = np.floor(
+            xyz[:, 1] / self.RESOLUTION + self.half_cells_y + 0.5
+        ).astype(np.int64)
         valid = (gx >= 0) & (gx < self.grid_width) & (gy >= 0) & (gy < self.grid_height)
         # fmax ignores NaN, so the first point in an empty cell wins.
         np.fmax.at(elevation, (gy[valid], gx[valid]), xyz[valid, 2])
@@ -233,15 +239,25 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self.resize(260, 220)
         self._node: Node | None = None
         self._publishers = {}
+        self._subscriptions = {}
+        self._waypoint_topic = '/mission_control/husky1/waypoint_accept'
+        self._waypoint_publisher = None
         self._robot_states = {'husky1': True, 'parrot1': True}
+        self._ui_timer = QTimer(self)
+        self._ui_timer.timeout.connect(self._update_labels)
+        self._ui_timer.start(200)
         self._build_ui()
 
     def set_node(self, node: Node) -> None:
         self._node = node
+        self._ensure_waypoint_publisher()
+        self._publish_waypoint_accept(False)
         for robot_name in self._robot_states:
             self._ensure_publisher(robot_name)
+            self._ensure_subscription(robot_name)
 
     def shutdown(self) -> None:
+        self._ui_timer.stop()
         if self._node is None:
             return
         for publisher in self._publishers.values():
@@ -251,6 +267,20 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
                 pass
         self._publishers.clear()
 
+        if self._waypoint_publisher is not None:
+            try:
+                self._node.destroy_publisher(self._waypoint_publisher)
+            except Exception:
+                pass
+            self._waypoint_publisher = None
+
+        for subscription in self._subscriptions.values():
+            try:
+                self._node.destroy_subscription(subscription)
+            except Exception:
+                pass
+        self._subscriptions.clear()
+
     def _build_ui(self) -> None:
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
@@ -259,6 +289,10 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         title = QtWidgets.QLabel('Robot Toggle')
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
+
+        self._waypoint_button = QtWidgets.QPushButton('Set Husky Waypoint To Latest Heat Signature')
+        self._waypoint_button.clicked.connect(self._trigger_waypoint_accept)
+        layout.addWidget(self._waypoint_button)
 
         self._husky_button = QtWidgets.QPushButton('Stop Husky')
         self._husky_button.clicked.connect(lambda: self._toggle_robot('husky1'))
@@ -284,17 +318,59 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if not clean_name or self._node is None:
             return None
         if clean_name not in self._publishers:
-            self._publishers[clean_name] = self._node.create_publisher(Bool, f'/{clean_name}/stopButton', 10)
+            self._publishers[clean_name] = self._node.create_publisher(Bool, f'/{clean_name}/estop', 10)
         return self._publishers[clean_name]
+
+    def _ensure_subscription(self, robot_name: str):
+        clean_name = self._clean_robot_name(robot_name)
+        if not clean_name or self._node is None:
+            return None
+        if clean_name not in self._subscriptions:
+            self._subscriptions[clean_name] = self._node.create_subscription(
+                Bool,
+                f'/{clean_name}/estop',
+                lambda msg, name=clean_name: self._estop_state_cb(name, msg),
+                10,
+            )
+        return self._subscriptions[clean_name]
+
+    def _ensure_waypoint_publisher(self):
+        if self._node is None:
+            return None
+        if self._waypoint_publisher is None:
+            self._waypoint_publisher = self._node.create_publisher(Bool, self._waypoint_topic, 10)
+        return self._waypoint_publisher
 
     def _publish_stop_state(self, robot_name: str, stopped: bool) -> None:
         publisher = self._ensure_publisher(robot_name)
         if publisher is not None:
             publisher.publish(Bool(data=stopped))
 
+    def _publish_waypoint_accept(self, accepted: bool) -> None:
+        publisher = self._ensure_waypoint_publisher()
+        if publisher is not None:
+            publisher.publish(Bool(data=accepted))
+
+    def _estop_state_cb(self, robot_name: str, msg: Bool) -> None:
+        # Bool True on estop means robot is stopped.
+        self._robot_states[robot_name] = not bool(msg.data)
+
     def _update_labels(self) -> None:
         self._husky_button.setText('Stop Husky' if self._robot_states.get('husky1', True) else 'Start Husky')
         self._parrot_button.setText('Stop Parrot' if self._robot_states.get('parrot1', True) else 'Start Parrot')
+
+    def _trigger_waypoint_accept(self) -> None:
+        if self._node is None:
+            self._status.setText('ROS node is not connected yet.')
+            return
+
+        # Send a rising-edge trigger and reset to false so each click can
+        # request a fresh waypoint update from mission control.
+        self._publish_waypoint_accept(True)
+        QTimer.singleShot(120, lambda: self._publish_waypoint_accept(False))
+        self._status.setText(
+            f'Waypoint trigger sent on {self._waypoint_topic} (auto-reset to False).',
+        )
 
     def _toggle_robot(self, robot_name: str) -> None:
         clean_name = self._clean_robot_name(robot_name)
@@ -306,6 +382,7 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             return
 
         self._robot_states.setdefault(clean_name, True)
+        self._ensure_subscription(clean_name)
         if self._robot_states[clean_name]:
             self._publish_stop_state(clean_name, True)
             self._status.setText(f'{clean_name} stopButton published as True.')

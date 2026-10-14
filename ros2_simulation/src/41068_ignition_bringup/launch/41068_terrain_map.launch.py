@@ -32,6 +32,11 @@ def generate_launch_description():
         default_value='terrain_points',
         description='Topic name for the accumulated point cloud output',
     )
+    use_sim_time = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use Gazebo simulation time for TF and output stamps',
+    )
 
     terrain_node = Node(
         package='41068_ignition_bringup',
@@ -43,6 +48,7 @@ def generate_launch_description():
             'map_frame': LaunchConfiguration('map_frame'),
             'pointcloud_topic': LaunchConfiguration('pointcloud_topic'),
             'output_topic': LaunchConfiguration('output_topic'),
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
         }],
         remappings=[
             ('/tf', 'tf'),
@@ -56,6 +62,7 @@ def generate_launch_description():
     ld.add_action(map_frame)
     ld.add_action(pointcloud_topic)
     ld.add_action(output_topic)
+    ld.add_action(use_sim_time)
     ld.add_action(terrain_node)
 
     return ld

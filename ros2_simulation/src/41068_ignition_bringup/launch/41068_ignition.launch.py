@@ -1,8 +1,16 @@
+import os
+import random
+import re
+import tempfile
+
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     GroupAction,
     IncludeLaunchDescription,
+    LogInfo,
+    OpaqueFunction,
     SetEnvironmentVariable,
     TimerAction,
 )
@@ -15,6 +23,83 @@ from launch_ros.substitutions import FindPackageShare
 
 
 _TRUE_STRINGS = "['true', '1', 'yes', 'on']"
+
+# Candidate human poses for terrain_demo. One is chosen at random on each launch.
+_TERRAIN_DEMO_HUMAN_POSES = [
+    '-15 -10 1 -1.7 0 0',
+    '-15 0 0 -1.25 0 0',
+    '-15 15 0 -1.5 0 0',
+    '12 15 1.4 -1.5 0 0',
+    '12 -5 0.75 -1.7 0 0',
+    '2.3978 12.5679 0.4785 -1.7 0 0',
+]
+
+
+def _randomize_terrain_human_pose(world_path):
+    with open(world_path, 'r', encoding='utf-8') as handle:
+        world_text = handle.read()
+
+    selected_pose = random.choice(_TERRAIN_DEMO_HUMAN_POSES)
+    include_pattern = (
+        r'(<include>\s*<uri>model://human</uri>\s*<name>human_heat1</name>\s*<pose>)'
+        r'([^<]+)'
+        r'(</pose>)'
+    )
+    randomized_text, replaced = re.subn(
+        include_pattern,
+        rf'\1{selected_pose}\3',
+        world_text,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if replaced != 1:
+        return world_path, None, len(_TERRAIN_DEMO_HUMAN_POSES)
+
+    temp_world = tempfile.NamedTemporaryFile(
+        mode='w',
+        encoding='utf-8',
+        prefix='terrain_demo_randomized_',
+        suffix='.sdf',
+        delete=False,
+    )
+    with temp_world:
+        temp_world.write(randomized_text)
+
+    return temp_world.name, selected_pose, len(_TERRAIN_DEMO_HUMAN_POSES)
+
+
+def _add_gazebo_with_world_randomization(context, *_args, **_kwargs):
+    package_share = get_package_share_directory('41068_ignition_bringup')
+    world_name = LaunchConfiguration('world').perform(context)
+    world_path = os.path.join(package_share, 'worlds', f'{world_name}.sdf')
+
+    selected_pose = None
+    option_count = 0
+    if world_name == 'terrain_demo':
+        world_path, selected_pose, option_count = _randomize_terrain_human_pose(world_path)
+
+    ign_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('ros_ign_gazebo'),
+                'launch',
+                'ign_gazebo.launch.py',
+            )
+        ),
+        launch_arguments={
+            'ign_args': f'{world_path} -r',
+        }.items(),
+    )
+
+    actions = [ign_launch]
+    if selected_pose is not None:
+        actions.append(LogInfo(msg=(
+            f'terrain_demo: selected human pose {selected_pose} '
+            f'from {option_count} options'
+        )))
+    elif world_name == 'terrain_demo':
+        actions.append(LogInfo(msg='terrain_demo: could not patch human_heat1 pose in world file; using default pose'))
+    return actions
 
 
 def _is_true_expression(name):
@@ -293,26 +378,8 @@ def generate_launch_description():
         value=server_config_file,
     ))
 
-    # Start Gazebo once.
-    ld.add_action(IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([
-                FindPackageShare('ros_ign_gazebo'),
-                'launch',
-                'ign_gazebo.launch.py',
-            ])
-        ),
-        launch_arguments={
-            'ign_args': [
-                PathJoinSubstitution([
-                    pkg_path,
-                    'worlds',
-                    [LaunchConfiguration('world'), '.sdf'],
-                ]),
-                ' -r',
-            ]
-        }.items(),
-    ))
+    # Start Gazebo once, randomizing the human spawn pose for terrain_demo.
+    ld.add_action(OpaqueFunction(function=_add_gazebo_with_world_randomization))
 
     # Bridge the global simulation clock once.
     ld.add_action(Node(

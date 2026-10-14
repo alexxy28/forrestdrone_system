@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 
 import rclpy
+from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from sensor_msgs.msg import PointCloud2
@@ -25,19 +26,23 @@ class TerrainMapBuilder:
     def __init__(
         self,
         resolution: float = 0.5,
-        map_size_x: float = 24.0,
-        map_size_y: float = 24.0,
+        map_size_x: float = 40.0,
+        map_size_y: float = 40.0,
     ) -> None:
         self.resolution = max(float(resolution), 1e-6)
         self.map_size_x = float(map_size_x)
         self.map_size_y = float(map_size_y)
 
-        self.grid_width = max(
-            1, int(round(self.map_size_x / self.resolution))
+        # Use an odd cell count so the cell at (0, 0) is centered exactly on
+        # world/map origin. The requested size is the nominal full span.
+        self.half_cells_x = max(
+            0, int(np.ceil(self.map_size_x / (2.0 * self.resolution)))
         )
-        self.grid_height = max(
-            1, int(round(self.map_size_y / self.resolution))
+        self.half_cells_y = max(
+            0, int(np.ceil(self.map_size_y / (2.0 * self.resolution)))
         )
+        self.grid_width = 2 * self.half_cells_x + 1
+        self.grid_height = 2 * self.half_cells_y + 1
 
         # NaN is the unknown-cell marker; valid elevations may be negative.
         self.grid = np.full(
@@ -63,19 +68,17 @@ class TerrainMapBuilder:
         if arr.size == 0:
             return 0
 
-        x_min = -self.map_size_x / 2.0
-        y_min = -self.map_size_y / 2.0
-
         xs = arr[:, 0]
         ys = arr[:, 1]
         zs = arr[:, 2]
 
+        # Index cells by their centers; (0, 0) maps to the center cell rather
+        # than sitting on a boundary between four cells.
         x_idx = np.floor(
-            (xs - x_min) / self.resolution
+            xs / self.resolution + self.half_cells_x + 0.5
         ).astype(int)
-
         y_idx = np.floor(
-            (ys - y_min) / self.resolution
+            ys / self.resolution + self.half_cells_y + 0.5
         ).astype(int)
 
         valid = (
@@ -103,10 +106,8 @@ class TerrainMapBuilder:
             return np.empty((0, 3), dtype=np.float64)
 
         y_idx, x_idx = np.nonzero(valid)
-        x_min = -self.map_size_x / 2.0
-        y_min = -self.map_size_y / 2.0
-        xs = x_min + (x_idx + 0.5) * self.resolution
-        ys = y_min + (y_idx + 0.5) * self.resolution
+        xs = (x_idx - self.half_cells_x) * self.resolution
+        ys = (y_idx - self.half_cells_y) * self.resolution
         zs = self.grid[y_idx, x_idx].astype(np.float64)
         return np.column_stack((xs, ys, zs)).astype(np.float64, copy=False)
 
@@ -152,6 +153,7 @@ class TerrainMapNode(Node):
         self.declare_parameter('map_frame', 'parrot1_odom')
         self.declare_parameter('pointcloud_topic', 'scan/points')
         self.declare_parameter('output_topic', 'terrain_points')
+        self.declare_parameter('odometry_topic', '/parrot1/odometry')
 
         self.robot_name = self.get_parameter(
             'robot_name'
@@ -168,6 +170,10 @@ class TerrainMapNode(Node):
         self.output_topic = self.get_parameter(
             'output_topic'
         ).value
+        self.odometry_topic = self.get_parameter(
+            'odometry_topic'
+        ).value
+        self.latest_odometry: Odometry | None = None
 
         if not self.map_frame:
             self.map_frame = f'{self.robot_name}_odom'
@@ -192,6 +198,12 @@ class TerrainMapNode(Node):
             self._pointcloud_callback,
             qos,
         )
+        self.odometry_sub = self.create_subscription(
+            Odometry,
+            self.odometry_topic,
+            self._odometry_callback,
+            qos,
+        )
 
         self.terrain_pub = self.create_publisher(
             PointCloud2,
@@ -203,8 +215,12 @@ class TerrainMapNode(Node):
             f'Terrain accumulation started for robot={self.robot_name}; '
             f'map frame={self.map_frame}, '
             f'point cloud topic={self.lidar_sub.topic_name}, '
+            f'odometry topic={self.odometry_sub.topic_name}, '
             f'output topic={self.terrain_pub.topic_name}'
         )
+
+    def _odometry_callback(self, msg: Odometry) -> None:
+        self.latest_odometry = msg
 
     def _extract_xyz(
         self,
@@ -256,10 +272,38 @@ class TerrainMapNode(Node):
 
         return arr[:, :3]
 
+    @staticmethod
+    def _rotation_matrix(quaternion) -> np.ndarray:
+        x = quaternion.x
+        y = quaternion.y
+        z = quaternion.z
+        w = quaternion.w
+        return np.array(
+            [
+                [
+                    1.0 - 2.0 * (y * y + z * z),
+                    2.0 * (x * y - z * w),
+                    2.0 * (x * z + y * w),
+                ],
+                [
+                    2.0 * (x * y + z * w),
+                    1.0 - 2.0 * (x * x + z * z),
+                    2.0 * (y * z - x * w),
+                ],
+                [
+                    2.0 * (x * z - y * w),
+                    2.0 * (y * z + x * w),
+                    1.0 - 2.0 * (x * x + y * y),
+                ],
+            ],
+            dtype=np.float64,
+        )
+
     def _transform_xyz_cloud(
         self,
         msg: PointCloud2,
-        transform,
+        rotation_matrix: np.ndarray,
+        translation: np.ndarray,
         target_frame: str,
     ) -> PointCloud2:
         """
@@ -292,45 +336,11 @@ class TerrainMapNode(Node):
                 [],
             )
 
-        translation = transform.transform.translation
-        rotation = transform.transform.rotation
-
-        tx = translation.x
-        ty = translation.y
-        tz = translation.z
-
-        qx = rotation.x
-        qy = rotation.y
-        qz = rotation.z
-        qw = rotation.w
-
-        # Quaternion -> 3x3 rotation matrix.
-        r00 = 1.0 - 2.0 * (qy * qy + qz * qz)
-        r01 = 2.0 * (qx * qy - qz * qw)
-        r02 = 2.0 * (qx * qz + qy * qw)
-
-        r10 = 2.0 * (qx * qy + qz * qw)
-        r11 = 1.0 - 2.0 * (qx * qx + qz * qz)
-        r12 = 2.0 * (qy * qz - qx * qw)
-
-        r20 = 2.0 * (qx * qz - qy * qw)
-        r21 = 2.0 * (qy * qz + qx * qw)
-        r22 = 1.0 - 2.0 * (qx * qx + qy * qy)
-
-        transformed_points = []
-
-        for x, y, z in xyz:
-            transformed_points.append(
-                (
-                    r00 * x + r01 * y + r02 * z + tx,
-                    r10 * x + r11 * y + r12 * z + ty,
-                    r20 * x + r21 * y + r22 * z + tz,
-                )
-            )
+        transformed_points = xyz @ rotation_matrix.T + translation
 
         return point_cloud2.create_cloud_xyz32(
             header,
-            transformed_points,
+            transformed_points.tolist(),
         )
 
     def _filter_height_outliers(
@@ -373,22 +383,94 @@ class TerrainMapNode(Node):
             )
             return None
 
+        odometry = self.latest_odometry
+        if odometry is None:
+            self.get_logger().warning(
+                'Dropping LiDAR cloud: waiting for raw Parrot odometry.',
+                throttle_duration_sec=5.0,
+            )
+            return None
+
+        if odometry.header.frame_id != self.map_frame:
+            self.get_logger().error(
+                f'Dropping LiDAR cloud: raw odometry frame '
+                f'{odometry.header.frame_id!r} does not match map frame '
+                f'{self.map_frame!r}.',
+                throttle_duration_sec=5.0,
+            )
+            return None
+
+        if not odometry.child_frame_id:
+            self.get_logger().warning(
+                'Dropping LiDAR cloud: raw odometry has an empty child_frame_id.',
+                throttle_duration_sec=5.0,
+            )
+            return None
+
         try:
-            transform = self.tf_buffer.lookup_transform(
-                self.map_frame,
+            cloud_stamp = rclpy.time.Time.from_msg(
+                msg.header.stamp,
+                clock_type=self.get_clock().clock_type,
+            )
+            odometry_stamp = rclpy.time.Time.from_msg(
+                odometry.header.stamp,
+                clock_type=self.get_clock().clock_type,
+            )
+            if abs((odometry_stamp - cloud_stamp).nanoseconds) > 250_000_000:
+                self.get_logger().warning(
+                    'Dropping LiDAR cloud: raw odometry is more than 0.25 s '
+                    'from the scan timestamp.',
+                    throttle_duration_sec=5.0,
+                )
+                return None
+
+            # Use only the static base_link -> LiDAR mount from TF. The
+            # dynamic robot pose comes from Gazebo's raw odometry: the EKF
+            # TF in this setup can report a tilted/offset pose, which adds
+            # flight altitude and attitude error into terrain cell heights.
+            sensor_mount = self.tf_buffer.lookup_transform(
+                odometry.child_frame_id,
                 msg.header.frame_id,
                 rclpy.time.Time(),
                 timeout=rclpy.duration.Duration(seconds=0.2),
             )
         except Exception as exc:
             self.get_logger().warning(
-                f'Dropping LiDAR cloud: transform '
-                f'{msg.header.frame_id} -> {self.map_frame} unavailable: {exc}',
+                f'Dropping LiDAR cloud: static transform '
+                f'{msg.header.frame_id} -> {odometry.child_frame_id} '
+                f'unavailable: {exc}',
                 throttle_duration_sec=5.0,
             )
             return None
 
-        return self._transform_xyz_cloud(msg, transform, self.map_frame)
+        base_pose = odometry.pose.pose
+        base_rotation = self._rotation_matrix(base_pose.orientation)
+        mount_rotation = self._rotation_matrix(
+            sensor_mount.transform.rotation
+        )
+        mount_translation = np.array(
+            [
+                sensor_mount.transform.translation.x,
+                sensor_mount.transform.translation.y,
+                sensor_mount.transform.translation.z,
+            ],
+            dtype=np.float64,
+        )
+        base_translation = np.array(
+            [
+                base_pose.position.x,
+                base_pose.position.y,
+                base_pose.position.z,
+            ],
+            dtype=np.float64,
+        )
+
+        # Compose map->base odometry with the static base->sensor mount.
+        rotation = base_rotation @ mount_rotation
+        translation = base_translation + base_rotation @ mount_translation
+        return self._transform_xyz_cloud(
+            msg, rotation, translation, self.map_frame
+        )
 
     def _pointcloud_callback(
         self,
@@ -437,10 +519,10 @@ class TerrainMapNode(Node):
             self.get_logger().warning(
                 f'Received {xyz.shape[0]} finite points in frame '
                 f'{cloud_in_map.header.frame_id}, but none fell inside '
-                f'the map bounds X=[{-self.terrain_builder.map_size_x / 2:.1f}, '
-                f'{self.terrain_builder.map_size_x / 2:.1f}] m, '
-                f'Y=[{-self.terrain_builder.map_size_y / 2:.1f}, '
-                f'{self.terrain_builder.map_size_y / 2:.1f}] m.',
+                f'the map bounds X=[{-((self.terrain_builder.half_cells_x + 0.5) * self.terrain_builder.resolution):.1f}, '
+                f'{((self.terrain_builder.half_cells_x + 0.5) * self.terrain_builder.resolution):.1f}] m, '
+                f'Y=[{-((self.terrain_builder.half_cells_y + 0.5) * self.terrain_builder.resolution):.1f}, '
+                f'{((self.terrain_builder.half_cells_y + 0.5) * self.terrain_builder.resolution):.1f}] m.',
                 throttle_duration_sec=5.0,
             )
         elif heights.size:
