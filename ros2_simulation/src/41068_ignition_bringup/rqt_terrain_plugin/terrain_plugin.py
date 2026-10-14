@@ -328,7 +328,7 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if clean_name not in self._subscriptions:
             self._subscriptions[clean_name] = self._node.create_subscription(
                 Bool,
-                f'mission_control/{clean_name}/estop',
+                f'{clean_name}/estop',
                 lambda msg, name=clean_name: self._estop_state_cb(name, msg),
                 10,
             )
