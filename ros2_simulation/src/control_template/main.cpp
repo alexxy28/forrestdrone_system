@@ -61,10 +61,19 @@ int main(int argc, char* argv[])
     auto node = std::make_shared<ParrotNode>();
     rclcpp::WallRate rate(10.0);
     std::size_t reportedCasualties = 0;
+    bool reportedDetection = node->hasDetectedCasualty();
     std::cout << "Commands: list, confirm <index>, deny <index>, quit\n";
 
     while (rclcpp::ok()) {
         rclcpp::spin_some(node);
+
+        const bool detectedCasualty = node->hasDetectedCasualty();
+        if (detectedCasualty != reportedDetection) {
+            RCLCPP_INFO(node->get_logger(), "Casualty detection flag changed: %s -> %s",
+                        reportedDetection ? "true" : "false",
+                        detectedCasualty ? "true" : "false");
+            reportedDetection = detectedCasualty;
+        }
 
         const auto casualties = node->getCasualties();
         if (casualties.size() > reportedCasualties) {

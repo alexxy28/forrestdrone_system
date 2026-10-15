@@ -41,8 +41,8 @@ std::vector<std::pair<double, double>> simplifyRoute(
 SystemControlNode::SystemControlNode()
     : Node("system_control_node"),
       terrainMap_(declare_parameter<double>("terrain_resolution", 0.5),
-                  declare_parameter<double>("terrain_size_x", 20.0),
-                  declare_parameter<double>("terrain_size_y", 20.0)),
+                  declare_parameter<double>("terrain_size_x", 40.0),
+                  declare_parameter<double>("terrain_size_y", 40.0)),
       terrainPlanner_(terrainMap_),
       routeStep_(declare_parameter<int>("route_step", 2))
 {
@@ -105,8 +105,11 @@ SystemControlNode::SystemControlNode()
     setState(State::SEARCHING);
     RCLCPP_INFO(get_logger(),
                 "Mission control ready. Search area x %.1f..%.1f, y %.1f..%.1f. "
+                "Terrain map %.1f x %.1f m. "
                 "Start with: ros2 service call /mission/start std_srvs/srv/Trigger",
-                areaX0_, areaX0_ + areaWidth_, areaY0_, areaY0_ + areaHeight_);
+                areaX0_, areaX0_ + areaWidth_, areaY0_, areaY0_ + areaHeight_,
+                get_parameter("terrain_size_x").as_double(),
+                get_parameter("terrain_size_y").as_double());
 }
 
 void SystemControlNode::terrainCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)

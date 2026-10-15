@@ -44,7 +44,7 @@ add_library(terrain_lib STATIC
     SYSTEM_CONTROL/terrain_planner.cpp
 )
 target_include_directories(terrain_lib PUBLIC SYSTEM_CONTROL)
-ament_target_dependencies(terrain_lib sensor_msgs)
+ament_target_dependencies(terrain_lib rclcpp sensor_msgs)
 
 add_executable(system_control_node SYSTEM_CONTROL/systemControlNode.cpp)
 target_include_directories(system_control_node PRIVATE .)

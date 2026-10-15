@@ -302,6 +302,24 @@ void Parrot::stop()
     publish(0.0, 0.0, 0.0, 0.0);
 }
 
+bool Parrot::aimAtRelativeBearing(double bearing)
+{
+    constexpr double alignmentToleranceRad = 0.08;
+    constexpr double pi = 3.14159265358979323846;
+    while (bearing > pi) {
+        bearing -= 2.0 * pi;
+    }
+    while (bearing < -pi) {
+        bearing += 2.0 * pi;
+    }
+    if (std::abs(bearing) <= alignmentToleranceRad) {
+        stop();
+        return true;
+    }
+    publish(0.0, 0.0, 0.0, std::clamp(2.0 * bearing, -1.0, 1.0));
+    return false;
+}
+
 // ================= stop button =================
 // Holds in place and remembers when the hold started.
 void Parrot::hold()

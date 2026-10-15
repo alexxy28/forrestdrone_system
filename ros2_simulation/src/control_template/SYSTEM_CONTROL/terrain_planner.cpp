@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <queue>
+#include <rclcpp/rclcpp.hpp>
 
 struct SearchNode
 {
@@ -46,11 +47,23 @@ TerrainPlanner::plan(
 
     if (!terrain_map_.worldToGrid(
             start_x, start_y, sx, sy))
+    {
+        RCLCPP_WARN(
+            rclcpp::get_logger("terrain_planner"),
+            "Route start (%.2f, %.2f) is outside the terrain map",
+            start_x, start_y);
         return {};
+    }
 
     if (!terrain_map_.worldToGrid(
             goal_x, goal_y, gx, gy))
+    {
+        RCLCPP_WARN(
+            rclcpp::get_logger("terrain_planner"),
+            "Route goal (%.2f, %.2f) is outside the terrain map",
+            goal_x, goal_y);
         return {};
+    }
 
     const int width =
         terrain_map_.getWidth();

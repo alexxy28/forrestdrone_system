@@ -102,19 +102,32 @@ Source: [ParrotNode.cpp](PARROT/ParrotNode.cpp), [parrot.cpp](PARROT/parrot.cpp)
 - Publishes `/parrot1/cmd_vel` (`geometry_msgs/Twist`)
 - Subscribes to `/parrot1/thermal_camera` and `/parrot1/camera/depth/image`
 - Publishes user-confirmed detections on `/mission/casualty` (`geometry_msgs/PointStamped`)
+- Publishes `true` on `/CasulityDiscovered` (`std_msgs/Bool`) when a casualty is detected.
+- Subscribes to `/CasulityConfirmed` (`std_msgs/Bool`) and waits indefinitely for a
+  `true` or `false` response.
 
 The control loop runs every 100 ms. The state is worked out fresh on every cycle, so a
 drone that drifts off altitude during the search goes back to climbing.
 
 Thermal detection converts 16-bit Kelvin-centikelvin images to Celsius, extracts hot
 connected components, rejects blobs without valid depth, and converts the best candidate
-to the odometry frame. Three spatially consistent frames are required by default. Set
-`show_camera_windows:=true` to enable the OpenCV thermal and depth diagnostics.
+to the odometry frame. Before that conversion, the Parrot rotates in place to center the
+heat signature in the thermal camera, then uses the aligned camera bearing for the
+world-coordinate calculation. Small hot footprints are retained by default with a 1-pixel
+minimum blob area and a 3x3 morphology kernel. These can be tuned with
+`minimum_heat_blob_area:=N` and `thermal_morphology_kernel_size:=N`. Three spatially
+consistent frames are required by default. Set `show_camera_windows:=true` to enable the
+OpenCV thermal and depth diagnostics.
 
-When a candidate is detected, the Parrot pauses its patrol and flies to the candidate
-for review. In the Parrot node's terminal, use `list`, then `confirm <index>` or
-`deny <index>`. Confirming sends its position to mission control, which plans and sends
-a route to the Husky. Either decision resumes the Parrot's saved patrol route.
+When a candidate is detected, the Parrot publishes `true` on `/CasulityDiscovered` and
+holds its position until a response arrives on `/CasulityConfirmed`. A `false` response
+dismisses the candidate and resumes patrol. A `true` response confirms the casualty,
+publishes its position to mission control, flies to the 5 m review point, circles the
+casualty, and then resumes the saved patrol route. For example:
+
+```bash
+ros2 topic pub --once /CasulityConfirmed std_msgs/msg/Bool "{data: true}"
+```
 
 States:
 

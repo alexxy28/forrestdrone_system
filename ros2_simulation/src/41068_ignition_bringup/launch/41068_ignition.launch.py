@@ -47,7 +47,7 @@ def _randomize_terrain_human_pose(world_path):
     )
     randomized_text, replaced = re.subn(
         include_pattern,
-        rf'\1{selected_pose}\3',
+        lambda match: f'{match.group(1)}{selected_pose}{match.group(3)}',
         world_text,
         count=1,
         flags=re.DOTALL,
