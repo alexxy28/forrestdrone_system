@@ -33,7 +33,10 @@ inline constexpr char STATE[]        = "/mission/state";         // std_msgs/Str
 // Raw odometry is in world coordinates; the EKF output (/parrot1/odom) sits metres off in x/y.
 inline constexpr char PARROT_ODOM[]    = "/parrot1/odometry";        // nav_msgs/Odometry, raw Gazebo, sim -> parrot
 inline constexpr char PARROT_CMD_VEL[] = "/parrot1/cmd_vel";         // geometry_msgs/Twist, parrot -> sim
-inline constexpr char PARROT_TERRAIN[] = "/parrot1/terrain_points";  // sensor_msgs/PointCloud2, terrain_map_builder -> control
+inline constexpr char PARROT_SCAN[]    = "/parrot1/scan/points";     // sensor_msgs/PointCloud2, sim -> terrain_map
+inline constexpr char PARROT_TERRAIN[] = "/parrot1/terrain_points";  // sensor_msgs/PointCloud2 (x, y, z, sigma, count), terrain_map -> control
+inline constexpr char PARROT_TF[]        = "/parrot1/tf";            // tf2_msgs/TFMessage, sim -> terrain_map
+inline constexpr char PARROT_TF_STATIC[] = "/parrot1/tf_static";     // tf2_msgs/TFMessage, sim -> terrain_map
 inline constexpr char PARROT_THERMAL[] = "/parrot1/thermal_camera";  // sensor_msgs/Image, sim -> parrot
 inline constexpr char PARROT_DEPTH[]   = "/parrot1/camera/depth/image";  // sensor_msgs/Image, sim -> parrot
 

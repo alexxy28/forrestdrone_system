@@ -53,10 +53,26 @@ ament_target_dependencies(system_control_node rclcpp geometry_msgs nav_msgs sens
     std_srvs
 )
 
+add_executable(terrain_map_node SYSTEM_CONTROL/terrain_map_node.cpp)
+target_include_directories(terrain_map_node PRIVATE .)
+target_link_libraries(terrain_map_node terrain_lib)
+ament_target_dependencies(terrain_map_node rclcpp nav_msgs sensor_msgs tf2 tf2_ros)
+
+# Self-check, not installed: ./build/control_template/terrain_map_check
+add_executable(terrain_map_check SYSTEM_CONTROL/terrain_map_check.cpp)
+target_link_libraries(terrain_map_check terrain_lib)
+
+# Self-check, not installed: ./build/control_template/parrot_scan_check
+add_executable(parrot_scan_check PARROT/parrot_scan_check.cpp PARROT/parrot.cpp)
+target_include_directories(parrot_scan_check PRIVATE .)
+ament_target_dependencies(parrot_scan_check rclcpp geometry_msgs nav_msgs sensor_msgs
+    visualization_msgs std_msgs)
+
 install(TARGETS
     parrot_node
     husky_node
     system_control_node
+    terrain_map_node
     DESTINATION lib/${PROJECT_NAME}
 )
 

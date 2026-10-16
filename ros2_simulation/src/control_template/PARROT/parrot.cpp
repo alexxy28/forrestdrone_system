@@ -1,5 +1,7 @@
-// parrot.cpp — the drone: climb, zig-zag area search, lidar avoidance of trees and slopes.
-// Run by ParrotNode (state machine): WAITING_FOR_ODOM -> CLIMBING -> SEARCHING -> HOLDING
+// parrot.cpp — the drone: climb, then fly the waypoints mission control sends,
+// steering around trees and slopes seen by the horizontal obstacle lidar and
+// holding a set height above ground measured by the down lidar.
+// Run by ParrotNode: WAITING_FOR_ODOM -> CLIMBING -> IDLE -> SEARCHING -> HOLDING
 //
 // Terminal 1 (sim):
 //   source ~/rs1_ws/install/setup.bash
@@ -10,30 +12,26 @@
 //   colcon build --symlink-install --packages-select control_template
 //   source install/setup.bash
 //   ros2 run control_template parrot_node
+//   Different height above ground: --ros-args -p target_altitude:=8.0
 //
-// Default search: x -11..11, y -11..11, lanes 4 m apart. Change without rebuilding, e.g.
-//   ros2 run control_template parrot_node --ros-args -p area_x0:=-17.0 -p area_width:=28.0
-// Single point test:  --ros-args -p goto_x:=-15.0 -p goto_y:=-10.0
-//
-// RViz: /parrot1/scan (LaserScan), /parrot1/obstacle_markers (MarkerArray)
-//   green cylinders = trees, orange spheres = nearest point of a slope/hill
-
-// parrot.cpp — the drone: climb, then fly the waypoints mission control sends,
-// steering around trees and slopes seen by the lidar.
-// Run by ParrotNode: WAITING_FOR_ODOM -> CLIMBING -> IDLE -> SEARCHING -> HOLDING
-//
-// RViz: /parrot1/scan (LaserScan), /parrot1/obstacle_markers (MarkerArray)
+// RViz: /parrot1/obstacle_scan (LaserScan), /parrot1/obstacle_markers (MarkerArray)
 //   green cylinders = trees, orange spheres = nearest point of a slope/hill
 
 #include "parrot.hpp"
 
+#include "sensor_msgs/point_cloud2_iterator.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <optional>
 #include <string>
 #include <utility>
 
 namespace {
+
+// Down lidar sits this far below base_link (down_scan_joint in parrot.urdf.xacro).
+constexpr double DOWN_SCAN_BELOW_BASE_M = 0.12;
 
 double yawFromQuaternion(const geometry_msgs::msg::Quaternion & q)
 {
@@ -53,14 +51,11 @@ Parrot::Parrot(rclcpp::Node* node, double maxSpeed, double tolerance, double tar
     // --- topics ---
     std::string odom_topic   = node_->declare_parameter<std::string>("odom_topic", "/parrot1/odometry");
     std::string cmd_topic    = node_->declare_parameter<std::string>("cmd_topic", "/parrot1/cmd_vel");
-    std::string scan_topic   = node_->declare_parameter<std::string>("scan_topic", "/parrot1/scan");
+    std::string scan_topic   = node_->declare_parameter<std::string>("scan_topic", "/parrot1/obstacle_scan");
+    std::string cloud_topic  = node_->declare_parameter<std::string>("agl_cloud_topic", "/parrot1/scan/points");
     std::string marker_topic = node_->declare_parameter<std::string>("marker_topic", "/parrot1/obstacle_markers");
 
-    // --- height: timed climb (set takeoff_time to 0 to use z / target_altitude instead) ---
-    takeoff_speed_ = node_->declare_parameter<double>("takeoff_speed", 0.5);   // m/s up
-    takeoff_time_  = node_->declare_parameter<double>("takeoff_time", 4.0);    // s
-
-    // --- lidar ---
+    // --- obstacle lidar (horizontal) ---
     cluster_gap_    = node_->declare_parameter<double>("cluster_gap", 0.5);     // gap that separates two objects
     min_points_     = node_->declare_parameter<int>("min_cluster_points", 3);   // smaller = noise
     max_tree_width_ = node_->declare_parameter<double>("max_tree_width", 2.0);  // wider = slope/hill
@@ -81,13 +76,12 @@ Parrot::Parrot(rclcpp::Node* node, double maxSpeed, double tolerance, double tar
     scan_sub_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
         scan_topic, rclcpp::SensorDataQoS(),
         std::bind(&Parrot::onScan, this, std::placeholders::_1));
+    cloud_sub_ = node_->create_subscription<sensor_msgs::msg::PointCloud2>(
+        cloud_topic, rclcpp::SensorDataQoS(),
+        std::bind(&Parrot::onDownCloud, this, std::placeholders::_1));
 
-    if (timedClimb()) {
-        RCLCPP_INFO(node_->get_logger(), "Height: timed climb, %.1f s at %.1f m/s (z not used)",
-                    takeoff_time_, takeoff_speed_);
-    } else {
-        RCLCPP_INFO(node_->get_logger(), "Height: hold z = %.1f m", target_alt_);
-    }
+    RCLCPP_INFO(node_->get_logger(), "Height: hold %.1f m above ground (down lidar %s)",
+                target_alt_, cloud_topic.c_str());
 }
 
 // ================= status =================
@@ -98,10 +92,7 @@ bool Parrot::ready() const
 
 bool Parrot::atAltitude() const
 {
-    if (timedClimb()) {
-        return climbed_;
-    }
-    return std::fabs(target_alt_ - z_) < 0.5;
+    return climbed_;
 }
 
 bool Parrot::searchComplete() const
@@ -140,12 +131,96 @@ void Parrot::onOdom(const nav_msgs::msg::Odometry::SharedPtr msg)
 {
     x_   = msg->pose.pose.position.x;
     y_   = msg->pose.pose.position.y;
-    z_   = msg->pose.pose.position.z;
     yaw_ = yawFromQuaternion(msg->pose.pose.orientation);
     have_pose_ = true;
 }
 
-// ================= lidar: trees + slopes =================
+// ================= down lidar: height above ground =================
+// Height = distance down to the highest return below the drone: the ground,
+// or a canopy we are passing over (so the drone rises over trees).
+void Parrot::onDownCloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
+{
+    double top = -std::numeric_limits<double>::infinity();
+    sensor_msgs::PointCloud2ConstIterator<float> x(*msg, "x"), y(*msg, "y"), z(*msg, "z");
+    for (; x != x.end(); ++x, ++y, ++z) {
+        if (std::isfinite(*x) && std::isfinite(*y) && std::isfinite(*z) && *z < 0.0f) {
+            top = std::max(top, static_cast<double>(*z));
+        }
+    }
+    // ponytail: ignores roll/pitch, error is h*(1-cos tilt); rotate by odom attitude if it matters.
+    have_agl_ = std::isfinite(top);
+    if (have_agl_) {
+        agl_ = DOWN_SCAN_BELOW_BASE_M - top;
+    }
+}
+
+// ================= obstacle lidar: trees + slopes =================
+std::vector<std::vector<Parrot::Point>> Parrot::clusterScan(
+    const std::vector<float>& ranges, double angle_min, double angle_inc,
+    double range_min, double range_max, double gap, int min_points)
+{
+    const size_t n = ranges.size();
+    std::vector<std::optional<Point>> pts(n);
+    for (size_t i = 0; i < n; i++) {
+        double r = ranges[i];
+        if (std::isfinite(r) && r >= range_min && r <= range_max) {
+            double a = angle_min + i * angle_inc;
+            pts[i] = Point{r * std::cos(a), r * std::sin(a)};
+        }
+    }
+
+    // Only a full circle has its last beam next to its first.
+    const bool wraps = n * std::fabs(angle_inc) > 2.0 * M_PI - 2.0 * std::fabs(angle_inc);
+    // Beam i starts a new object if it or the beam before it has no return, or they are far apart.
+    auto breaksBefore = [&](size_t i) {
+        if (i == 0 && !wraps) {
+            return true;
+        }
+        const auto & prev = pts[(i + n - 1) % n];
+        return !pts[i] || !prev ||
+               std::hypot(pts[i]->first - prev->first, pts[i]->second - prev->second) > gap;
+    };
+
+    // Start at a break so an object across the seam isn't split. No break = one closed ring.
+    size_t start = 0;
+    while (start < n && !breaksBefore(start)) {
+        ++start;
+    }
+    if (start == n) {
+        start = 0;
+    }
+
+    std::vector<std::vector<Point>> clusters;
+    std::vector<Point> cluster;
+    auto flush = [&]() {
+        if (static_cast<int>(cluster.size()) >= min_points) {
+            clusters.push_back(cluster);
+        }
+        cluster.clear();
+    };
+    for (size_t k = 0; k < n; k++) {
+        size_t i = (start + k) % n;
+        if (breaksBefore(i)) {
+            flush();
+        }
+        if (pts[i]) {
+            cluster.push_back(*pts[i]);
+        }
+    }
+    flush();
+    return clusters;
+}
+
+// Not first-to-last: a closed ring or U-shape has its ends close together.
+double Parrot::clusterWidth(const std::vector<Point>& cluster)
+{
+    double w = 0.0;
+    for (const auto & p : cluster) {
+        w = std::max(w, std::hypot(p.first - cluster.front().first, p.second - cluster.front().second));
+    }
+    return w;
+}
+
 Parrot::Obstacle Parrot::makeObstacle(double bx, double by, double width) const
 {
     Obstacle o;
@@ -158,7 +233,6 @@ Parrot::Obstacle Parrot::makeObstacle(double bx, double by, double width) const
     return o;
 }
 
-// Consecutive scan points closer than cluster_gap belong to one object.
 // Narrow object -> tree (its centre). Wide object -> slope (its closest point).
 void Parrot::onScan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
 {
@@ -173,49 +247,22 @@ void Parrot::onScan(const sensor_msgs::msg::LaserScan::SharedPtr msg)
 
     std::vector<Obstacle> trees;
     std::vector<Obstacle> slopes;
-    std::vector<std::pair<double, double>> cluster;
-    double prev_x = 0.0, prev_y = 0.0;
-    bool have_prev = false;
-
-    auto flush = [&]() {
-        if (static_cast<int>(cluster.size()) >= min_points_) {
-            double w = std::hypot(cluster.front().first - cluster.back().first,
-                                  cluster.front().second - cluster.back().second);
-            if (w > max_tree_width_) {
-                auto nearest = *std::min_element(cluster.begin(), cluster.end(),
-                    [](const std::pair<double, double> & a, const std::pair<double, double> & b) {
-                        return std::hypot(a.first, a.second) < std::hypot(b.first, b.second);
-                    });
-                slopes.push_back(makeObstacle(nearest.first, nearest.second, w));
-            } else {
-                double sx = 0.0, sy = 0.0;
-                for (const auto & p : cluster) { sx += p.first; sy += p.second; }
-                trees.push_back(makeObstacle(sx / cluster.size(), sy / cluster.size(), w));
-            }
+    for (const auto & cluster : clusterScan(msg->ranges, msg->angle_min, msg->angle_increment,
+                                            msg->range_min, msg->range_max,
+                                            cluster_gap_, min_points_)) {
+        double w = clusterWidth(cluster);
+        if (w > max_tree_width_) {
+            auto nearest = *std::min_element(cluster.begin(), cluster.end(),
+                [](const Point & a, const Point & b) {
+                    return std::hypot(a.first, a.second) < std::hypot(b.first, b.second);
+                });
+            slopes.push_back(makeObstacle(nearest.first, nearest.second, w));
+        } else {
+            double sx = 0.0, sy = 0.0;
+            for (const auto & p : cluster) { sx += p.first; sy += p.second; }
+            trees.push_back(makeObstacle(sx / cluster.size(), sy / cluster.size(), w));
         }
-        cluster.clear();
-    };
-
-    for (size_t i = 0; i < msg->ranges.size(); i++) {
-        double r = msg->ranges[i];
-        if (!std::isfinite(r) || r < msg->range_min || r > msg->range_max) {
-            flush();
-            have_prev = false;
-            continue;
-        }
-        double a  = msg->angle_min + i * msg->angle_increment;
-        double px = r * std::cos(a);
-        double py = r * std::sin(a);
-
-        if (have_prev && std::hypot(px - prev_x, py - prev_y) > cluster_gap_) {
-            flush();
-        }
-        cluster.push_back({px, py});
-        prev_x = px;
-        prev_y = py;
-        have_prev = true;
     }
-    flush();
 
     trees_ = trees;
     slopes_ = slopes;
@@ -312,49 +359,37 @@ void Parrot::hold()
     }
 }
 
-// Push the climb and stuck timers forward by however long we were held,
-// so time spent stopped doesn't count as climbing or as "no progress".
+// Push the stuck timer forward by however long we were held,
+// so time spent stopped doesn't count as "no progress".
 void Parrot::catchUpAfterHold(double now_s)
 {
     if (hold_start_s_ < 0.0) {
         return;
     }
     double held = now_s - hold_start_s_;
-    if (climb_start_s_ >= 0.0) {
-        climb_start_s_ += held;
-    }
     last_progress_s_ += held;
     hold_start_s_ = -1.0;
 }
 
-/// Vertical speed that holds the target altitude (z mode only; 0 in timed mode).
+/// Vertical speed that holds target_altitude above ground (0 while the down lidar sees nothing).
 double Parrot::altitudeCommand() const
 {
-    if (timedClimb()) {
+    if (!have_agl_) {
+        RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
+                             "No ground in down lidar range, holding height");
         return 0.0;
     }
-    return std::clamp(0.8 * (target_alt_ - z_), -1.0, 1.0);
+    return std::clamp(0.8 * (target_alt_ - agl_), -1.0, 1.0);
 }
 
 void Parrot::climb()
 {
-    if (!timedClimb()) {
-        publish(0.0, 0.0, altitudeCommand(), 0.0);
-        return;
-    }
-    double now_s = node_->now().seconds();
-    catchUpAfterHold(now_s);
-    if (climb_start_s_ < 0.0) {
-        climb_start_s_ = now_s;
-        RCLCPP_INFO(node_->get_logger(), "Taking off for %.1f s at %.1f m/s",
-                    takeoff_time_, takeoff_speed_);
-    }
-    if (now_s - climb_start_s_ >= takeoff_time_) {
+    catchUpAfterHold(node_->now().seconds());
+    publish(0.0, 0.0, altitudeCommand(), 0.0);
+    if (have_agl_ && std::fabs(target_alt_ - agl_) < 0.5) {
         climbed_ = true;
-        stop();
-        return;
+        RCLCPP_INFO(node_->get_logger(), "Reached %.1f m above ground", agl_);
     }
-    publish(0.0, 0.0, takeoff_speed_, 0.0);
 }
 
 // Adds a "push away + slide around" velocity for one obstacle (body frame).

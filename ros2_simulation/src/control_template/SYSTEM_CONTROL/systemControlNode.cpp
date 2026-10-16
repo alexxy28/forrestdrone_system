@@ -41,8 +41,8 @@ std::vector<std::pair<double, double>> simplifyRoute(
 SystemControlNode::SystemControlNode()
     : Node("system_control_node"),
       terrainMap_(declare_parameter<double>("terrain_resolution", 0.5),
-                  declare_parameter<double>("terrain_size_x", 20.0),
-                  declare_parameter<double>("terrain_size_y", 20.0)),
+                  declare_parameter<double>("terrain_size_x", 40.0),
+                  declare_parameter<double>("terrain_size_y", 40.0)),
       terrainPlanner_(terrainMap_),
       routeStep_(declare_parameter<int>("route_step", 2))
 {

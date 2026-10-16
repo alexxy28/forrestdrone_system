@@ -33,6 +33,13 @@
   gz_type_name: "gz.msgs.LaserScan"
   direction: GZ_TO_ROS
 
+# Obstacle lidar: horizontal laserscan
+- ros_topic_name: "obstacle_scan"
+  gz_topic_name: "/model/parrot1/obstacle_scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+
 # Lidar: pointcloud
 - ros_topic_name: "scan/points"
   gz_topic_name: "/model/parrot1/scan/points"

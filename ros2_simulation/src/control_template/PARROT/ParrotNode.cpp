@@ -48,7 +48,7 @@ ParrotNode::ParrotNode()
 parrot_(this,
 declare_parameter<double>("max_speed", 1.5),
 declare_parameter<double>("goal_tolerance", 1.0),
-declare_parameter<double>("target_altitude", 20.0)),
+declare_parameter<double>("target_altitude", 5.0)),   // m above ground
 thermalCamera_(this)
 {
     // Latched both ways, so it doesn't matter which node starts first.
@@ -140,7 +140,8 @@ void ParrotNode::onStop(const std_msgs::msg::Bool::SharedPtr msg)
 
 void ParrotNode::tick()
 {
-    // Worked out fresh each cycle: a drone that drifts off altitude goes back to climbing.
+    // Worked out fresh each cycle. CLIMBING only happens once: after that the
+    // drone holds its height above ground while it flies.
 if (!parrot_.ready()) {
 setState(State::WAITING_FOR_ODOM);
 return;
