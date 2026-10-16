@@ -163,8 +163,6 @@ Source: [terrain_map_node.cpp](SYSTEM_CONTROL/terrain_map_node.cpp),
 - Publishes `/parrot1/terrain_points` (`sensor_msgs/PointCloud2`, fields x, y, z, sigma,
   count; one point per observed cell)
 
-Self-check: `./build/control_template/terrain_map_check`.
-
 ### system_control_node
 
 Owns the mission: plans the route over the terrain map and tracks progress.
