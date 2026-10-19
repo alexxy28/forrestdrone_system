@@ -53,6 +53,9 @@ void flyToWaypoint();
     /// Publish a zero Twist so the drone holds position.
 void stop();
 
+    /// Rotate in place until a relative bearing is centered in the thermal camera.
+bool aimAtRelativeBearing(double bearing);
+
 void hold();
 
 private:
