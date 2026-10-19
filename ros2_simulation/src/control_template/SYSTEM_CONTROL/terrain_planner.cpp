@@ -150,17 +150,21 @@ TerrainPlanner::plan(
             const double distance_cost =
                 diagonal ? std::sqrt(2.0) : 1.0;
 
-            const double slope =
-                terrain_map_.getSlope(nx, ny);
-
             const double slope_cost =
-                slope / 25.0;
+                terrain_map_.getSlope(nx, ny) /
+                TerrainMap::MAX_SLOPE_DEG;
+
+            const double sigma_cost =
+                terrain_map_.getSigma(nx, ny) /
+                TerrainMap::MAX_SIGMA_M;
 
             const double movement_cost =
                 DISTANCE_WEIGHT *
                     distance_cost +
                 SLOPE_WEIGHT *
-                    slope_cost;
+                    slope_cost +
+                SIGMA_WEIGHT *
+                    sigma_cost;
 
             const int current_index =
                 index(current.x, current.y);

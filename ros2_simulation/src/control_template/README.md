@@ -68,24 +68,14 @@ ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
   world:=large_demo husky:=True parrot:=True nav2:=True
 ```
 
-2. Terrain builder
-
-```bash
-ros2 run 41068_ignition_bringup terrain_map_builder.py --ros-args \
-  -r __ns:=/parrot1 -r /tf:=/parrot1/tf -r /tf_static:=/parrot1/tf_static \
-  -p use_sim_time:=true
-```
-
-Run the script directly instead of through `41068_terrain_map.launch.py`. The launch file
-does not remap TF, so the builder would not see the Parrot's transforms.
-
-3. The three nodes
+2. The control nodes (including the terrain map builder)
 
 ```bash
 ros2 launch 41068_ignition_bringup control.launch.py
 ```
 
-To start only some of them, pass `nodes` (any of `system_control`, `husky`, `parrot`):
+To start only some of them, pass `nodes` (any of `system_control`, `husky`, `parrot`,
+`terrain_map`):
 
 ```bash
 ros2 launch 41068_ignition_bringup control.launch.py nodes:=husky,parrot
@@ -99,15 +89,22 @@ Flies the drone: wait for odometry, climb, fly the search pattern, hold.
 Source: [ParrotNode.cpp](PARROT/ParrotNode.cpp), [parrot.cpp](PARROT/parrot.cpp).
 
 - Subscribes to `/parrot1/odometry` (`nav_msgs/Odometry`)
+- Subscribes to `/parrot1/obstacle_scan` (`sensor_msgs/LaserScan`): horizontal 360 deg lidar
+  on top of the drone, used to steer around trees and slopes
+- Subscribes to `/parrot1/scan/points` (`sensor_msgs/PointCloud2`): the down lidar under the
+  hull, used for height above ground
 - Publishes `/parrot1/cmd_vel` (`geometry_msgs/Twist`)
+- Publishes `/parrot1/obstacle_markers` (`visualization_msgs/MarkerArray`)
 - Subscribes to `/parrot1/thermal_camera` and `/parrot1/camera/depth/image`
 - Publishes user-confirmed detections on `/mission/casualty` (`geometry_msgs/PointStamped`)
 - Publishes `true` on `/CasulityDiscovered` (`std_msgs/Bool`) when a casualty is detected.
 - Subscribes to `/CasulityConfirmed` (`std_msgs/Bool`) and waits indefinitely for a
   `true` or `false` response.
 
-The control loop runs every 100 ms. The state is worked out fresh on every cycle, so a
-drone that drifts off altitude during the search goes back to climbing.
+The control loop runs every 100 ms. The state is worked out fresh on every cycle.
+`target_altitude` (default 7 m) is height **above ground**: the distance down to the
+highest down-lidar return, so the drone follows hills and rises over canopies. Odometry z
+is not used.
 
 Thermal detection converts 16-bit Kelvin-centikelvin images to Celsius, extracts hot
 connected components, rejects blobs without valid depth, and converts the best candidate
@@ -132,7 +129,8 @@ ros2 topic pub --once /CasulityConfirmed std_msgs/msg/Bool "{data: true}"
 States:
 
 - `WAITING_FOR_ODOM`: no odometry received yet. Nothing is published.
-- `CLIMBING`: more than 0.5 m from the target altitude. Vertical command only.
+- `CLIMBING`: not yet within 0.5 m of the target height. Vertical command only. Happens
+  once; after that the height is held while flying.
 - `SEARCHING`: at altitude, waypoints remaining. Steer toward the current waypoint.
 - `HOLDING`: at altitude, all waypoints reached. Zero velocity every cycle.
 
@@ -162,9 +160,25 @@ Statuses:
 
 The status is published only when it changes.
 
+### terrain_map_node
+
+Builds the terrain map from the Parrot LiDAR. Each 0.5 m cell of a 40 x 40 m grid, centred
+on the origin, keeps a running mean (height) and variance (roughness) of its returns.
+Above 50 returns, old data fades out so moved objects clear. Cells whose returns spread
+more than 0.5 m (canopy over ground) are blocked for the Husky. Prints a statistics block
+every 5 s.
+Source: [terrain_map_node.cpp](SYSTEM_CONTROL/terrain_map_node.cpp),
+[terrain_map.cpp](SYSTEM_CONTROL/terrain_map.cpp).
+
+- Subscribes to `/parrot1/scan/points` (`sensor_msgs/PointCloud2`)
+- Subscribes to `/parrot1/odometry` (`nav_msgs/Odometry`, raw Gazebo pose)
+- Uses `/parrot1/tf_static` for the LiDAR mount only
+- Publishes `/parrot1/terrain_points` (`sensor_msgs/PointCloud2`, fields x, y, z, sigma,
+  count; one point per observed cell)
+
 ### system_control_node
 
-Owns the mission: builds the terrain map, plans the route and tracks progress.
+Owns the mission: plans the route over the terrain map and tracks progress.
 Source: [systemControlNode.cpp](SYSTEM_CONTROL/systemControlNode.cpp).
 
 - Subscribes to `/parrot1/terrain_points` (`sensor_msgs/PointCloud2`)
@@ -202,7 +216,9 @@ Every topic name is defined once, in `namespace topics` in
   depth 10
 - `PARROT_CMD_VEL`: `/parrot1/cmd_vel`, `geometry_msgs/Twist`, parrot to sim, default QoS,
   depth 10
-- `PARROT_TERRAIN`: `/parrot1/terrain_points`, `sensor_msgs/PointCloud2`, terrain builder
+- `PARROT_SCAN`: `/parrot1/scan/points`, `sensor_msgs/PointCloud2`, sim to terrain_map,
+  sensor data QoS
+- `PARROT_TERRAIN`: `/parrot1/terrain_points`, `sensor_msgs/PointCloud2`, terrain_map
   to control, sensor data QoS
 - `HUSKY_ODOM`: `/husky1/odometry`, `nav_msgs/Odometry`, sim to control, sensor data QoS
 - `HUSKY_NAVIGATE`: `/husky1/navigate_to_pose`, `nav2_msgs/NavigateToPose` action, husky
@@ -225,8 +241,8 @@ waypoints, starting at (-10, -10) and ending at (6, 6).
 
 The control law has three parts:
 
-- Altitude: vertical speed is 0.8 times the height error, limited to 1 m/s. It is applied
-  during the climb and throughout the search.
+- Altitude: vertical speed is 0.8 times the height-above-ground error, limited to 1 m/s.
+  It is applied during the climb and throughout the search.
 - Heading: turn rate is 1.5 times the heading error toward the waypoint, limited to
   1 rad/s.
 - Speed: the drone moves forward only when it is within 0.5 rad of the right heading.
@@ -334,14 +350,11 @@ The full ordered test list is in [ToDo.md](ToDo.md).
   Parrot simulation model but must be updated if its sensors move independently.
 - The Parrot ignores the mission. `/mission/state` has no subscriber. The drone flies its
   whole pattern and holds, whatever the mission state is.
-- The planner finds no route. The Parrot's lidar scans a flat horizontal plane, and the
-  terrain map keeps the highest point per cell. In `large_demo` on 2 October 2026 most
-  cells came out at about 20 m, the drone's own altitude, and the planner reported
-  "No traversable route yet" indefinitely. The other worlds have not been tried; the same
-  lidar geometry applies to them.
-- The terrain map is offset from the world. The terrain builder places points using the
-  Parrot's EKF transform, which carries the x and y error described above. The Husky's
-  start position comes from raw odometry, so the two do not line up.
+- The terrain map has not been re-tested in the sim since the October 2026 rework. Earlier,
+  the map kept the highest point per cell and the lidar could not reach the ground from
+  the 20 m cruise altitude (its range was 8 m), so the planner reported "No traversable
+  route yet". The lidar now points down with a 30 m range, and cells keep a running mean
+  and variance.
 - The Husky stops short. Nav2's goal tolerance is 1.0 m. In testing the Husky reported
   arrival 0.95 m from the final waypoint.
 - Nav2 also runs on the Parrot. `nav2:=True` starts Nav2 for every robot, and the Parrot's

@@ -11,7 +11,7 @@ class TerrainPlanner
 public:
     explicit TerrainPlanner(TerrainMap &terrain_map);
 
-    // Terrain-aware A*: distance plus slope cost; empty if no route.
+    // Terrain-aware A*: distance plus slope and roughness cost; empty if no route.
     std::vector<std::pair<double, double>>
     plan(double start_x,
          double start_y,
@@ -26,6 +26,7 @@ private:
 
     const double DISTANCE_WEIGHT = 1.0;
     const double SLOPE_WEIGHT = 4.0;
+    const double SIGMA_WEIGHT = 4.0;
 };
 
 #endif

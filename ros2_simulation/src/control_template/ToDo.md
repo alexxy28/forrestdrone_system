@@ -32,12 +32,12 @@
 ## 3. Terrain map — investigate before relying on it for C3
 
 
-- [ ] Confirm `terrain_map_builder.py`'s "highest LiDAR return per 0.5 m cell" approach is detailed enough. In a forested world this risks capturing canopy/branches rather than ground, which could falsely mark walkable ground as steep/blocked.
+- [x] ~~Confirm `terrain_map_builder.py`'s "highest LiDAR return per 0.5 m cell" approach is detailed enough. In a forested world this risks capturing canopy/branches rather than ground, which could falsely mark walkable ground as steep/blocked.~~ Replaced by a per-cell running mean/variance in `terrain_map_node` (C++); high variance marks canopy as blocked.
 - [ ] Check `TerrainMap`'s hole-filling (2-pass neighbour averaging, requires ≥3 neighbours) against `terrain_demo.sdf` / `large_demo.sdf` — it was written for sparse gaps, not systematic canopy occlusion.
-- [ ] Resolve the size/resolution mismatch: the C++ `TerrainMap` defaults to a 20x20 m grid at 0.5 m, while `TerrainMapBuilder` (Python) defaults to 10x10 m and never actually publishes its own grid (its `self.grid` field is dead code — it only publishes the raw accumulated point cloud). Confirm whether these need to agree, since only the C++ side's grid is actually used for planning.
+- [x] ~~Resolve the size/resolution mismatch: the C++ `TerrainMap` defaults to a 20x20 m grid at 0.5 m, while `TerrainMapBuilder` (Python) defaults to 10x10 m and never actually publishes its own grid (its `self.grid` field is dead code — it only publishes the raw accumulated point cloud). Confirm whether these need to agree, since only the C++ side's grid is actually used for planning.~~ One `TerrainMap` class (40x40 m, 0.5 m, odd grid centred on the origin) is shared by `terrain_map_node` and `system_control_node`; rqt uses the same convention.
 - [ ] Decide: full terrain-aware planning for C3, or a simplified terrain model for early testing, per your note that a simplified version is acceptable to start.
-- [ ] *Add running min/max scan data (used for detecting trees), running varience (Welford's M2 term)(need more than 2 data points per cell to work), convert varience into a usable confidence score.* 
-- [ ] *when interpolating unknown cells use a low confidence score or identifyer so that guesses arent used in runnung average.*
+- [x] *Add running min/max scan data (used for detecting trees), running varience (Welford's M2 term)(need more than 2 data points per cell to work), convert varience into a usable confidence score.* Running mean/variance done (min/max skipped: variance already flags trees); sigma feeds the planner cost and blocks cells above 0.5 m.
+- [x] *when interpolating unknown cells use a low confidence score or identifyer so that guesses arent used in runnung average.* Hole-filled values live only in the derived elevation/sigma arrays and never enter the cell statistics.
 
 ---
 
