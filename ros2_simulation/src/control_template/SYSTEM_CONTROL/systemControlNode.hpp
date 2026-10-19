@@ -3,12 +3,14 @@
 
 #include "terrain_map.hpp"
 #include "terrain_planner.hpp"
+#include "ThermalCamera.hpp"
 
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
@@ -37,6 +39,7 @@ class SystemControlNode : public rclcpp::Node{
     void huskyStatusCallback(const std_msgs::msg::String::SharedPtr msg);
 
     void tryPlan();
+    void tick();
     void setState(State state);
 
     // ---- drone tasking ----
@@ -52,6 +55,7 @@ class SystemControlNode : public rclcpp::Node{
 
     TerrainMap terrainMap_;
     TerrainPlanner terrainPlanner_;
+    ThermalCamera thermalCamera_;
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr terrainSub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr huskyOdomSub_;
@@ -59,6 +63,9 @@ class SystemControlNode : public rclcpp::Node{
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr huskyStatusSub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr routePub_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr statePub_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr casualtyConfirmedPub_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr casualtyDiscoveredPub_;
+    rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr casualtyPub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     // ---- drone tasking ----
@@ -83,6 +90,7 @@ class SystemControlNode : public rclcpp::Node{
     double clickBoxSize_{8.0};
     std::string missionFrame_{"world"};
     std::string droneStatus_{"UNKNOWN"};
+    bool thermalDetectionHandled_{false};
 };
 
 #endif

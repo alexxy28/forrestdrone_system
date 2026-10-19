@@ -20,7 +20,6 @@ find_package(tf2_ros REQUIRED)
 add_executable(parrot_node
     main.cpp
     PARROT/ParrotNode.cpp
-    PARROT/ThermalCamera.cpp
     PARROT/parrot.cpp
 )
 target_include_directories(parrot_node PRIVATE .)
@@ -46,10 +45,15 @@ add_library(terrain_lib STATIC
 target_include_directories(terrain_lib PUBLIC SYSTEM_CONTROL)
 ament_target_dependencies(terrain_lib rclcpp sensor_msgs)
 
-add_executable(system_control_node SYSTEM_CONTROL/systemControlNode.cpp)
+add_executable(system_control_node
+    SYSTEM_CONTROL/systemControlNode.cpp
+    SYSTEM_CONTROL/ThermalCamera.cpp
+)
 target_include_directories(system_control_node PRIVATE .)
 target_link_libraries(system_control_node terrain_lib)
+target_link_libraries(system_control_node ${OpenCV_LIBRARIES})
 ament_target_dependencies(system_control_node rclcpp geometry_msgs nav_msgs sensor_msgs std_msgs
+    cv_bridge
     std_srvs
 )
 

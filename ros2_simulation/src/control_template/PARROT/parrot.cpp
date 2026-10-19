@@ -45,7 +45,8 @@ double yawFromQuaternion(const geometry_msgs::msg::Quaternion & q)
 }  // namespace
 
 Parrot::Parrot(rclcpp::Node* node, double maxSpeed, double tolerance, double targetAlt)
-    : node_(node), max_speed_(maxSpeed), tolerance_(tolerance), target_alt_(targetAlt)
+    : node_(node), max_speed_(maxSpeed), tolerance_(tolerance), target_alt_(targetAlt),
+      movement_debug_(node_->declare_parameter<bool>("movement_debug", true))
 {
     // max_speed, goal_tolerance and target_altitude are declared by ParrotNode.
     // Everything else the drone needs is declared here.
@@ -395,6 +396,11 @@ void Parrot::addRepulsion(const Obstacle & o, double radius, double & vx, double
 void Parrot::flyToWaypoint()
 {
     if (searchComplete()) {
+        if (movement_debug_) {
+            RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000,
+                                 "Movement: patrol complete at (%.2f, %.2f, %.2f)",
+                                 x_, y_, z_);
+        }
         stop();
         return;
     }
@@ -475,6 +481,16 @@ void Parrot::flyToWaypoint()
     // ---- face the waypoint ----
     double heading_error = std::atan2(dy, dx) - yaw_;
     heading_error = std::atan2(std::sin(heading_error), std::cos(heading_error));
+
+    if (movement_debug_) {
+        RCLCPP_INFO_THROTTLE(
+            node_->get_logger(), *node_->get_clock(), 1000,
+            "Movement: pose (%.2f, %.2f, %.2f), target %zu/%zu (%.2f, %.2f), "
+            "distance %.2f m, cmd (vx %.2f, vy %.2f, vz %.2f), heading error %.2f rad",
+            x_, y_, z_, index_ + 1, waypoints_.size(),
+            waypoints_[index_].x, waypoints_[index_].y, distance,
+            vx, vy, altitudeCommand(), heading_error);
+    }
 
     publish(vx, vy, altitudeCommand(), std::clamp(1.5 * heading_error, -1.0, 1.0));
 }

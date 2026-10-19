@@ -86,6 +86,7 @@ rclcpp::Node* node_;
 double max_speed_;
 double tolerance_;
 double target_alt_;
+bool movement_debug_;
 
     // ---- ROS I/O ----
 rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_;

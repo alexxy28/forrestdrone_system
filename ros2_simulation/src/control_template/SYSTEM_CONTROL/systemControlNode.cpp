@@ -44,6 +44,7 @@ SystemControlNode::SystemControlNode()
                   declare_parameter<double>("terrain_size_x", 40.0),
                   declare_parameter<double>("terrain_size_y", 40.0)),
       terrainPlanner_(terrainMap_),
+      thermalCamera_(this, [](double) { return true; }),
       routeStep_(declare_parameter<int>("route_step", 2))
 {
     // Latched so a node that starts late still sees the casualty, route and status.
@@ -60,6 +61,10 @@ SystemControlNode::SystemControlNode()
     casualtySub_ = create_subscription<geometry_msgs::msg::PointStamped>(
         topics::CASUALTY, latched,
         std::bind(&SystemControlNode::casualtyCallback, this, std::placeholders::_1));
+
+    casualtyConfirmedPub_ = create_publisher<std_msgs::msg::Bool>("/CasulityConfirmed", latched);
+    casualtyDiscoveredPub_ = create_publisher<std_msgs::msg::Bool>("/CasulityDiscovered", latched);
+    casualtyPub_ = create_publisher<geometry_msgs::msg::PointStamped>(topics::CASUALTY, latched);
 
     huskyStatusSub_ = create_subscription<std_msgs::msg::String>(
         topics::HUSKY_STATUS, latched,
@@ -100,7 +105,7 @@ SystemControlNode::SystemControlNode()
         std::bind(&SystemControlNode::stopDrone, this, std::placeholders::_1, std::placeholders::_2));
 
     // While PLANNING, retry once a second: the map may have grown since the last attempt.
-    timer_ = create_wall_timer(std::chrono::seconds(1), std::bind(&SystemControlNode::tryPlan, this));
+    timer_ = create_wall_timer(std::chrono::seconds(1), std::bind(&SystemControlNode::tick, this));
 
     setState(State::SEARCHING);
     RCLCPP_INFO(get_logger(),
@@ -136,6 +141,37 @@ void SystemControlNode::casualtyCallback(const geometry_msgs::msg::PointStamped:
     RCLCPP_INFO(get_logger(), "Casualty at (%.2f, %.2f)", casualtyX_, casualtyY_);
 
     setState(State::PLANNING);
+}
+
+void SystemControlNode::tick()
+{
+    if (state_ == State::SEARCHING && !thermalDetectionHandled_) {
+        const auto casualties = thermalCamera_.getCasualties();
+        if (!casualties.empty()) {
+            const auto casualty = std::find_if(
+                casualties.begin(), casualties.end(), [](const Casualty& item) {
+                    return item.status == CasualtyStatus::UNREVIEWED;
+                });
+            if (casualty != casualties.end()) {
+                thermalDetectionHandled_ = true;
+                std_msgs::msg::Bool discovered;
+                discovered.data = true;
+                casualtyDiscoveredPub_->publish(discovered);
+
+                thermalCamera_.confirmCasualty(casualty->index);
+                std_msgs::msg::Bool confirmed;
+                confirmed.data = true;
+                casualtyConfirmedPub_->publish(confirmed);
+                casualtyPub_->publish(casualty->position);
+                RCLCPP_INFO(get_logger(),
+                            "Thermal camera detected casualty %zu at (%.2f, %.2f, %.2f); "
+                            "mission control confirmed it",
+                            casualty->index, casualty->position.point.x,
+                            casualty->position.point.y, casualty->position.point.z);
+            }
+        }
+    }
+    tryPlan();
 }
 
 void SystemControlNode::huskyStatusCallback(const std_msgs::msg::String::SharedPtr msg)
