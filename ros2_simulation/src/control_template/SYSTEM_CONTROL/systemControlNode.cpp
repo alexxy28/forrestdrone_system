@@ -91,6 +91,12 @@ SystemControlNode::SystemControlNode()
         clickedTopic, 10,
         std::bind(&SystemControlNode::clickedPointCallback, this, std::placeholders::_1));
 
+    // ---- UI stop button: Ben's UI -> mission control -> drone ----
+    parrotEstopPub_ = create_publisher<std_msgs::msg::Bool>("/parrot1/estop", 10);
+    uiParrotEstopSub_ = create_subscription<std_msgs::msg::Bool>(
+        "/mission_control/parrot1/estop", 10,
+        std::bind(&SystemControlNode::uiParrotEstopCallback, this, std::placeholders::_1));
+
     startSrv_ = create_service<std_srvs::srv::Trigger>(
         "/mission/start",
         std::bind(&SystemControlNode::startSearch, this, std::placeholders::_1, std::placeholders::_2));
@@ -298,4 +304,12 @@ int main(int argc, char* argv[])
     rclcpp::spin(std::make_shared<SystemControlNode>());
     rclcpp::shutdown();
     return 0;
+}
+
+void SystemControlNode::uiParrotEstopCallback(const std_msgs::msg::Bool::SharedPtr msg)
+{
+    std_msgs::msg::Bool out;
+    out.data = msg->data;
+    parrotEstopPub_->publish(out);
+    RCLCPP_INFO(get_logger(), "UI: parrot %s", msg->data ? "STOP" : "START");
 }
