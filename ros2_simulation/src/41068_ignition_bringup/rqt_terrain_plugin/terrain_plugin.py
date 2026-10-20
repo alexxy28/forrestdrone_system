@@ -9,6 +9,7 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rqt_gui_py.plugin import Plugin
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
+from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool
 
 
@@ -34,6 +35,8 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._cloud_points = 0
         self._known_cells = 0
         self._cloud_frame = ''
+        self._husky_pos: tuple[float, float] | None = None
+        self._drone_pos: tuple[float, float] | None = None
         self._node: Node | None = None
         self._subscription = None
         self._topic = '/parrot1/terrain_points'
@@ -76,7 +79,26 @@ class TerrainMapWidget(QtWidgets.QWidget):
             self._cloud_cb,
             qos,
         )
+        # Add Odometry subscriptions
+        self._husky_sub = self._node.create_subscription(
+            Odometry,
+            '/husky1/odom', # Adjust topic name as needed
+            self._husky_odom_cb,
+            10
+        )
+        self._drone_sub = self._node.create_subscription(
+            Odometry,
+            '/parrot1/odom', # Adjust topic name as needed
+            self._drone_odom_cb,
+            10
+        )
+        
+    def _husky_odom_cb(self, msg: Odometry) -> None:
+        self._husky_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
 
+    def _drone_odom_cb(self, msg: Odometry) -> None:
+        self._drone_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+        
     def shutdown(self) -> None:
         self._timer.stop()
         if self._node is not None and self._subscription is not None:
@@ -197,7 +219,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         )
         self._z_range_text = f'low {z_min:.3f} m  /  high {z_max:.3f} m'
         return image.copy()
-
+        
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
         painter.fillRect(self.rect(), Qt.black)
@@ -220,7 +242,32 @@ class TerrainMapWidget(QtWidgets.QWidget):
             draw_h,
         )
         painter.drawImage(target, image)
+                # Draw Husky in Blue, Drone in Pink (Magenta)
+        def draw_robot_marker(pos, color):
+            if pos is None:
+                return
+            
+            world_x, world_y = pos
+            
+            # 1. Convert world coordinates to grid indices
+            gx = (world_x / self.RESOLUTION) + self.half_cells_x + 0.5
+            gy = (world_y / self.RESOLUTION) + self.half_cells_y + 0.5
+            
+            # 2. Invert Y because we flipped the image vertically
+            gy_img = self.grid_height - gy
+            
+            # 3. Scale grid indices to screen pixels
+            px = target.x() + (gx * (draw_w / self.grid_width))
+            py = target.y() + (gy_img * (draw_h / self.grid_height))
+            
+            # 4. Draw the marker
+            painter.setBrush(QColor(color))
+            painter.setPen(Qt.NoPen) # No border
+            painter.drawEllipse(int(px) - 5, int(py) - 5, 10, 10)
 
+        # Draw Husky in Blue, Drone in Pink (Magenta)
+        draw_robot_marker(self._husky_pos, "blue")
+        draw_robot_marker(self._drone_pos, "magenta")
         painter.setPen(QPen(QColor(255, 255, 255)))
         painter.drawText(
             8, 16,
