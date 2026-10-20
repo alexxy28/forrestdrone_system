@@ -403,8 +403,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._robot_states[robot_name] = not bool(msg.data)
 
     def _update_labels(self) -> None:
-        self._husky_button.setText('Stop Husky' if self._robot_states.get('husky1', True) else 'Start Husky')
-        self._parrot_button.setText('Stop Parrot' if self._robot_states.get('parrot1', True) else 'Start Parrot')
+        self._husky_button.setText('Stop Husky' if self._robot_states.get('husky1', False) else 'Start Husky')
+        self._parrot_button.setText('Stop Parrot' if self._robot_states.get('parrot1', False) else 'Start Parrot')
 
     def _trigger_waypoint_accept(self) -> None:
         if self._node is None:
