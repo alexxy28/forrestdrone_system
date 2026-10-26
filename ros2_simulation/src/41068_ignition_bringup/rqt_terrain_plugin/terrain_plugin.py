@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import numpy as np
+from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry, Path
 from python_qt_binding import QtWidgets
 from python_qt_binding.QtCore import QRect, QTimer, Qt
 from python_qt_binding.QtGui import QColor, QImage, QPainter, QPen
@@ -27,16 +29,36 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self.half_cells_y = int(np.ceil(self.SIZE_Y / (2.0 * self.RESOLUTION)))
         self.grid_width = 2 * self.half_cells_x + 1
         self.grid_height = 2 * self.half_cells_y + 1
-        # Elevation per cell, indexed [gy, gx]; NaN means no data.
+
         self._elevation: np.ndarray | None = None
         self._height_min = 0.0
         self._height_max = 1.0
         self._cloud_points = 0
         self._known_cells = 0
         self._cloud_frame = ''
+        self._z_range_text = ''
+
+        # Robot positions (x, y)
+        self._husky_pos: tuple[float, float] | None = None
+        self._drone_pos: tuple[float, float] | None = None
+
+        # Waypoints and Paths
+        self._husky_target_wp: tuple[float, float] | None = None
+        self._drone_target_wp: tuple[float, float] | None = None
+        self._husky_path: list[tuple[float, float]] = []
+        self._drone_path: list[tuple[float, float]] = []
+
         self._node: Node | None = None
         self._subscription = None
         self._topic = '/parrot1/terrain_points'
+
+        self._husky_odom_sub = None
+        self._drone_odom_sub = None
+        self._husky_plan_sub = None
+        self._husky_wp_sub = None
+        self._drone_plan_sub = None
+        self._drone_wp_sub = None
+
         self._timer = QTimer(self)
         self._timer.timeout.connect(self.update)
         self._timer.start(100)
@@ -77,14 +99,54 @@ class TerrainMapWidget(QtWidgets.QWidget):
             qos,
         )
 
+        # Odometry Subscriptions (Using /odometry to match the terrain builder's frame)
+        self._husky_odom_sub = self._node.create_subscription(
+            Odometry, '/husky1/odometry', self._husky_odom_cb, 10)
+        self._drone_odom_sub = self._node.create_subscription(
+            Odometry, '/parrot1/odometry', self._drone_odom_cb, 10)
+
+        # Nav2 Path Subscriptions
+        self._husky_plan_sub = self._node.create_subscription(
+            Path, '/husky1/plan', self._husky_plan_cb, 10)
+        self._drone_plan_sub = self._node.create_subscription(
+            Path, '/parrot1/plan', self._drone_plan_cb, 10)
+
+        # Target Goal Pose Subscriptions
+        self._husky_wp_sub = self._node.create_subscription(
+            PoseStamped, '/husky1/goal_pose', self._husky_wp_cb, 10)
+        self._drone_wp_sub = self._node.create_subscription(
+            PoseStamped, '/parrot1/goal_pose', self._drone_wp_cb, 10)
+
+    def _husky_odom_cb(self, msg: Odometry) -> None:
+        self._husky_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def _drone_odom_cb(self, msg: Odometry) -> None:
+        self._drone_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def _husky_plan_cb(self, msg: Path) -> None:
+        self._husky_path = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
+
+    def _drone_plan_cb(self, msg: Path) -> None:
+        self._drone_path = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
+
+    def _husky_wp_cb(self, msg: PoseStamped) -> None:
+        self._husky_target_wp = (msg.pose.position.x, msg.pose.position.y)
+
+    def _drone_wp_cb(self, msg: PoseStamped) -> None:
+        self._drone_target_wp = (msg.pose.position.x, msg.pose.position.y)
+
     def shutdown(self) -> None:
         self._timer.stop()
-        if self._node is not None and self._subscription is not None:
-            try:
-                self._node.destroy_subscription(self._subscription)
-            except Exception:
-                pass
-            self._subscription = None
+        if self._node is not None:
+            subs = [self._subscription, self._husky_odom_sub, self._drone_odom_sub, 
+                    self._husky_plan_sub, self._husky_wp_sub, self._drone_plan_sub, self._drone_wp_sub]
+            for sub in subs:
+                if sub is not None:
+                    try:
+                        self._node.destroy_subscription(sub)
+                    except Exception:
+                        pass
+        self._subscription = None
 
     def _extract_xyz(self, msg: PointCloud2) -> np.ndarray:
         raw_points = point_cloud2.read_points(
@@ -112,10 +174,6 @@ class TerrainMapWidget(QtWidgets.QWidget):
         return arr[:, :3]
 
     def _build_elevation(self, xyz: np.ndarray) -> np.ndarray:
-        """Keep the highest observed elevation per map cell.
-
-        Missing cells remain NaN so the renderer can display them as black.
-        """
         elevation = np.full((self.grid_height, self.grid_width), np.nan, dtype=np.float64)
 
         finite = np.isfinite(xyz).all(axis=1)
@@ -127,7 +185,6 @@ class TerrainMapWidget(QtWidgets.QWidget):
             xyz[:, 1] / self.RESOLUTION + self.half_cells_y + 0.5
         ).astype(np.int64)
         valid = (gx >= 0) & (gx < self.grid_width) & (gy >= 0) & (gy < self.grid_height)
-        # fmax ignores NaN, so the first point in an empty cell wins.
         np.fmax.at(elevation, (gy[valid], gx[valid]), xyz[valid, 2])
 
         return elevation
@@ -145,7 +202,6 @@ class TerrainMapWidget(QtWidgets.QWidget):
                 self._height_min = float(np.min(finite_z))
                 self._height_max = float(np.max(finite_z))
 
-            # The builder publishes the accumulated map on each update.
             self._elevation = self._build_elevation(xyz)
             self._known_cells = int(np.isfinite(self._elevation).sum())
         except Exception as exc:
@@ -165,9 +221,6 @@ class TerrainMapWidget(QtWidgets.QWidget):
         z_max = float(np.max(elevation[known]))
         z_range = z_max - z_min
 
-        # Use the raw cloud range if the grid is flat; otherwise keep the real
-        # current min/max so a higher cell can become red without the map
-        # collapsing to a 0.0 m range.
         if z_range <= 1e-6 and self._height_max > self._height_min:
             z_min = self._height_min
             z_max = self._height_max
@@ -181,7 +234,6 @@ class TerrainMapWidget(QtWidgets.QWidget):
         ratio = np.clip((elevation - z_min) / z_range, 0.0, 1.0)
         ratio = np.where(known, ratio, 0.0)
 
-        # Green (low) -> red (high). Unknown cells stay black.
         rgb = np.zeros((self.grid_height, self.grid_width, 3), dtype=np.uint8)
         red = np.clip(ratio * 255.0, 0.0, 255.0).astype(np.uint8)
         green = np.clip((1.0 - ratio) * 255.0, 0.0, 255.0).astype(np.uint8)
@@ -189,7 +241,6 @@ class TerrainMapWidget(QtWidgets.QWidget):
         rgb[..., 1] = green
         rgb[~known] = 0
 
-        # Flip so +y is drawn upwards.
         rgb = np.ascontiguousarray(rgb[::-1])
         image = QImage(
             rgb.data, self.grid_width, self.grid_height,
@@ -220,6 +271,51 @@ class TerrainMapWidget(QtWidgets.QWidget):
             draw_h,
         )
         painter.drawImage(target, image)
+
+        def world_to_pixel(world_x: float, world_y: float) -> tuple[int, int]:
+            gx = (world_x / self.RESOLUTION) + self.half_cells_x + 0.5
+            gy = (world_y / self.RESOLUTION) + self.half_cells_y + 0.5
+            gy_img = self.grid_height - gy
+            px = target.x() + (gx * (draw_w / self.grid_width))
+            py = target.y() + (gy_img * (draw_h / self.grid_height))
+            return int(px), int(py)
+
+        def draw_trajectory(current_pos, path, goal, color):
+            if current_pos is None:
+                return
+
+            pts = []
+            if len(path) >= 2:
+                pts = [world_to_pixel(x, y) for (x, y) in path]
+            elif goal is not None:
+                pts = [world_to_pixel(current_pos[0], current_pos[1]), world_to_pixel(goal[0], goal[1])]
+
+            if len(pts) >= 2:
+                painter.setPen(QPen(QColor(color), 2, Qt.DashLine))
+                for i in range(len(pts) - 1):
+                    painter.drawLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
+
+            dest = goal if goal is not None else (path[-1] if path else None)
+            if dest is not None:
+                wx, wy = world_to_pixel(dest[0], dest[1])
+                painter.setBrush(QColor(color))
+                painter.setPen(QPen(Qt.black, 1))
+                painter.drawEllipse(wx - 4, wy - 4, 8, 8)
+
+        def draw_robot_marker(pos, color):
+            if pos is None:
+                return
+            px, py = world_to_pixel(pos[0], pos[1])
+            painter.setBrush(QColor(color))
+            painter.setPen(QPen(Qt.white, 1))
+            painter.drawEllipse(px - 5, py - 5, 10, 10)
+
+        # Draw trajectories then robots on top
+        draw_trajectory(self._husky_pos, self._husky_path, self._husky_target_wp, 'cyan')
+        draw_trajectory(self._drone_pos, self._drone_path, self._drone_target_wp, 'pink')
+        
+        draw_robot_marker(self._husky_pos, 'blue')
+        draw_robot_marker(self._drone_pos, 'magenta')
 
         painter.setPen(QPen(QColor(255, 255, 255)))
         painter.drawText(
@@ -352,7 +448,6 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             publisher.publish(Bool(data=accepted))
 
     def _estop_state_cb(self, robot_name: str, msg: Bool) -> None:
-        # Bool True on estop means robot is stopped.
         self._robot_states[robot_name] = not bool(msg.data)
 
     def _update_labels(self) -> None:
@@ -364,8 +459,6 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             self._status.setText('ROS node is not connected yet.')
             return
 
-        # Send a rising-edge trigger and reset to false so each click can
-        # request a fresh waypoint update from mission control.
         self._publish_waypoint_accept(True)
         QTimer.singleShot(120, lambda: self._publish_waypoint_accept(False))
         self._status.setText(
@@ -393,7 +486,6 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             self._robot_states[clean_name] = True
 
         self._update_labels()
-
 
 
 class TerrainMapPlugin(Plugin):

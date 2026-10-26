@@ -166,7 +166,7 @@
     </model>
 
     <model name="oak3">
-      <pose>-9.12426 -11.2689 -0.3 0 0 0.3</pose>
+      <pose>-9.12426 -11.2689 1.5 0 0 0.3</pose>
       <static>true</static>
       <link name="tree">
         <collision name="trunk_collision">
@@ -284,7 +284,7 @@
     </model>
 
     <model name="oak5">
-      <pose>-6.26553 5.00575 -0.3 0 0 0.4</pose>
+      <pose>-6.26553 5.00575 1 0 0 0.4</pose>
       <static>true</static>
       <link name="tree">
         <collision name="trunk_collision">
@@ -461,7 +461,7 @@
     </model>
 
     <model name="oak8">
-      <pose>3.54698 5 -0.3 0 0 0.1</pose>
+      <pose>3.54698 5 0.25 0 0 0.1</pose>
       <static>true</static>
       <link name="tree">
         <collision name="trunk_collision">
@@ -520,7 +520,7 @@
     </model>
 
     <model name="pine1">
-      <pose>6.05721 9.78933 0 0 0 0.1</pose>
+      <pose>6.05721 9.78933 0.5 0 0 0.1</pose>
       <static>true</static>
       <link name="tree">
         <collision name="trunk_collision">
@@ -579,7 +579,7 @@
     </model>
 
     <model name="pine2">
-      <pose>-10.0184 8.85188 0 0 0 0.3</pose>
+      <pose>-10.0184 8.85188 1.5 0 0 0.3</pose>
       <static>true</static>
       <link name="tree">
         <collision name="trunk_collision">
@@ -638,7 +638,7 @@
     </model>
 
     <model name="pine3">
-      <pose>-4.62343 -12.5618 0 0 0 0.2</pose>
+      <pose>-4.62343 -12.5618 1.7 0 0 0.2</pose>
       <static>true</static>
       <link name="tree">
         <collision name="trunk_collision">
@@ -872,6 +872,714 @@
         </visual>
       </link>
     </model>
+
+    <model name="pine7">
+      <pose>-9.8852 -0.38 0.4165 0 0 0.5</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+    <model name="pine8">
+      <pose>-11.6994 2.9398 1.7677 0 0 0.5</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="oak9">
+      <pose>-14.0959 14.3341 -0.3 0 0 0.2</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="oak10">
+      <pose>-15.0000 13.0000 -0.2 0 0 0.4</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="oak11">
+      <pose>-14.2855 -17.3363 0.9 0 0 0.6</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="oak12">
+      <pose>-16.7216 7.1086 0.8 0 0 0.5</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="oak13">
+      <pose>12.5587 -13.3691 1.3474 0 0 0.1</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pine9">
+      <pose>12.9402 11.0553 1.3929 0 0 0.2</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pine10">
+      <pose>18.8 4.2 0.6 0 0 0.3</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pine11">
+      <pose>2.3148 15.9020 -0.1 0 0 0.7</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pine12">
+      <pose>-5.4351 -17.5470 0.5 0 0 0.9</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pine13">
+      <pose>13.0437 15.7760 -0.3942 0 0 0.5</pose>
+      <static>true</static>
+      <link name="tree">
+        <collision name="trunk_collision">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <collision name="canopy_collision">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="trunk_visual">
+          <pose>0 0 0.75 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.18</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.35 0.20 0.08 1</ambient>
+            <diffuse>0.35 0.20 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+        <visual name="canopy_visual">
+          <pose>0 0 1.75 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>0.75</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.05 0.45 0.08 1</ambient>
+            <diffuse>0.05 0.45 0.08 1</diffuse>
+          </material>
+          <plugin
+            filename="ignition-gazebo-thermal-system"
+            name="gz::sim::systems::Thermal">
+            <temperature>290.0</temperature>
+          </plugin>
+        </visual>
+      </link>
+    </model>
+
     <model name="demo_animal">
       <pose>-4 4 0 0 0 0</pose>
       <static>true</static>
