@@ -91,11 +91,17 @@ SystemControlNode::SystemControlNode()
         clickedTopic, 10,
         std::bind(&SystemControlNode::clickedPointCallback, this, std::placeholders::_1));
 
-    // ---- UI stop button: Ben's UI -> mission control -> drone ----
+     // ---- UI stop button: Ben's UI -> mission control -> drone ----
     parrotEstopPub_ = create_publisher<std_msgs::msg::Bool>("/parrot1/estop", 10);
     uiParrotEstopSub_ = create_subscription<std_msgs::msg::Bool>(
         "/mission_control/parrot1/estop", 10,
         std::bind(&SystemControlNode::uiParrotEstopCallback, this, std::placeholders::_1));
+
+    // ---- UI stop button: Ben's UI -> mission control -> Husky ----
+    huskyEstopPub_ = create_publisher<std_msgs::msg::Bool>("/husky1/estop", 10);
+    uiHuskyEstopSub_ = create_subscription<std_msgs::msg::Bool>(
+        "/mission_control/husky1/estop", 10,
+        std::bind(&SystemControlNode::uiHuskyEstopCallback, this, std::placeholders::_1));
 
     startSrv_ = create_service<std_srvs::srv::Trigger>(
         "/mission/start",
@@ -104,6 +110,9 @@ SystemControlNode::SystemControlNode()
     stopSrv_ = create_service<std_srvs::srv::Trigger>(
         "/mission/stop",
         std::bind(&SystemControlNode::stopDrone, this, std::placeholders::_1, std::placeholders::_2));
+
+
+
 
     // While PLANNING, retry once a second: the map may have grown since the last attempt.
     timer_ = create_wall_timer(std::chrono::seconds(1), std::bind(&SystemControlNode::tryPlan, this));
@@ -312,4 +321,12 @@ void SystemControlNode::uiParrotEstopCallback(const std_msgs::msg::Bool::SharedP
     out.data = msg->data;
     parrotEstopPub_->publish(out);
     RCLCPP_INFO(get_logger(), "UI: parrot %s", msg->data ? "STOP" : "START");
+}
+
+void SystemControlNode::uiHuskyEstopCallback(const std_msgs::msg::Bool::SharedPtr msg)
+{
+    std_msgs::msg::Bool out;
+    out.data = msg->data;
+    huskyEstopPub_->publish(out);
+    RCLCPP_INFO(get_logger(), "UI: husky %s", msg->data ? "STOP" : "START");
 }

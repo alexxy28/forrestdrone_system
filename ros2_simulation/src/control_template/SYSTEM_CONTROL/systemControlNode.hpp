@@ -83,6 +83,11 @@ class SystemControlNode : public rclcpp::Node{
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr parrotEstopPub_;
     void uiParrotEstopCallback(const std_msgs::msg::Bool::SharedPtr msg);
 
+    // UI stop button -> Husky
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr uiHuskyEstopSub_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr huskyEstopPub_;
+    void uiHuskyEstopCallback(const std_msgs::msg::Bool::SharedPtr msg);
+
     State state_{State::SEARCHING};
     int routeStep_;
 

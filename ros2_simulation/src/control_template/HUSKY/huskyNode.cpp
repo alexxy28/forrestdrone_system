@@ -1,6 +1,6 @@
 #include "huskyNode.hpp"
 
-#include <chrono>
+#include <chrono>  
 #include <cmath>
 #include <functional>
 #include <string>
@@ -25,6 +25,11 @@ HuskyNode::HuskyNode()
         std::bind(&HuskyNode::routeCallback, this, std::placeholders::_1));
 
     statusPub_ = create_publisher<std_msgs::msg::String>(topics::HUSKY_STATUS, latched);
+        // Stop button: true = cancel the Nav2 goal and hold, false = carry on.
+    const std::string stopTopic = declare_parameter<std::string>("stop_topic", "/husky1/estop");
+    stopSub_ = create_subscription<std_msgs::msg::Bool>(
+        stopTopic, 10,
+        std::bind(&HuskyNode::onStop, this, std::placeholders::_1));
 
     timer_ = create_wall_timer(std::chrono::milliseconds(200), std::bind(&HuskyNode::tick, this));
 
@@ -34,6 +39,15 @@ HuskyNode::HuskyNode()
 void HuskyNode::routeCallback(const nav_msgs::msg::Path::SharedPtr msg)
 {
     pendingRoute_ = *msg;
+}
+
+void HuskyNode::onStop(const std_msgs::msg::Bool::SharedPtr msg)
+{
+    if (msg->data) {
+        husky_.pause();
+    } else {
+        husky_.resume();
+    }
 }
 
 void HuskyNode::tick()

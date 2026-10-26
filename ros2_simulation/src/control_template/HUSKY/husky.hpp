@@ -11,7 +11,7 @@
 
 /// The ground robot: drives a route through Nav2, one waypoint at a time.
 class Husky{
-    public:
+public:
     explicit Husky(rclcpp::Node* node);
 
     /// True once Nav2's NavigateToPose action server is up.
@@ -21,16 +21,23 @@ class Husky{
     /// Ignored while a route is already being driven.
     void followRoute(const std::vector<Waypoint>& route);
 
+    /// Stop button: pause() cancels the Nav2 goal and holds. The route and the
+    /// current waypoint are kept, so resume() carries on from the same point.
+    void pause();
+    void resume();
+    bool paused() const;
+
     HuskyStatus status() const;
 
-    protected:
-    private:
+protected:
+private:
     using NavigateToPose = nav2_msgs::action::NavigateToPose;
     using GoalHandle = rclcpp_action::ClientGoalHandle<NavigateToPose>;
 
     void sendNextWaypoint();
-    void goalResponseCallback(GoalHandle::SharedPtr handle);
-    void resultCallback(const GoalHandle::WrappedResult& result);
+    void cancel(GoalHandle::SharedPtr handle);
+    void goalResponseCallback(GoalHandle::SharedPtr handle, int seq);
+    void resultCallback(const GoalHandle::WrappedResult& result, int seq);
 
     rclcpp::Node* node_;
     rclcpp_action::Client<NavigateToPose>::SharedPtr navClient_;
@@ -38,6 +45,10 @@ class Husky{
     std::vector<Waypoint> route_;
     size_t index_{0};
     HuskyStatus status_{HuskyStatus::IDLE};
+
+    GoalHandle::SharedPtr goalHandle_;  // goal Nav2 is driving right now
+    bool paused_{false};
+    int goalSeq_{0};                    // bumped on every send and every STOP; old replies get ignored
 };
 
 #endif
