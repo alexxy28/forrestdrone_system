@@ -9,7 +9,12 @@
 #include <opencv2/core/mat.hpp>
 
 #include <memory>
+#include <atomic>
+#include <condition_variable>
+#include <functional>
+#include <mutex>
 #include <optional>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -29,14 +34,16 @@ struct Casualty
 class ThermalCamera
 {
 public:
-    explicit ThermalCamera(rclcpp::Node* node);
+    ThermalCamera(rclcpp::Node* node, std::function<bool(double)> aimAtBearing);
     ~ThermalCamera();
 
     std::vector<Casualty> getCasualties() const;
+    bool hasDetectedCasualty() const;
     bool confirmCasualty(std::size_t index);
     bool denyCasualty(std::size_t index);
 
 private:
+    void processThermal(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
     void onThermal(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
     void onDepth(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
     void onOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr& msg);
@@ -51,6 +58,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depthSub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometrySub_;
 
+    mutable std::mutex dataMutex_;
     cv::Mat latestDepth_;
     nav_msgs::msg::Odometry::ConstSharedPtr latestOdometry_;
     rclcpp::Time latestDepthStamp_{0, 0, RCL_ROS_TIME};
@@ -66,10 +74,19 @@ private:
     double syncToleranceS_;
     double confirmationDistanceM_;
     int minimumBlobArea_;
+    int morphologyKernelSize_;
     int confirmationFrames_;
     int matchingFrames_{0};
     bool showWindows_;
     std::vector<Casualty> casualties_;
+
+    std::mutex thermalQueueMutex_;
+    std::condition_variable thermalQueueCondition_;
+    sensor_msgs::msg::Image::ConstSharedPtr pendingThermal_;
+    bool shuttingDown_{false};
+    std::thread thermalThread_;
+    std::atomic<bool> casualtyDetected_{false};
+    std::function<bool(double)> aimAtBearing_;
 };
 
 #endif

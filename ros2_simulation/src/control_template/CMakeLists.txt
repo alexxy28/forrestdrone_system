@@ -44,7 +44,7 @@ add_library(terrain_lib STATIC
     SYSTEM_CONTROL/terrain_planner.cpp
 )
 target_include_directories(terrain_lib PUBLIC SYSTEM_CONTROL)
-ament_target_dependencies(terrain_lib sensor_msgs)
+ament_target_dependencies(terrain_lib rclcpp sensor_msgs)
 
 add_executable(system_control_node SYSTEM_CONTROL/systemControlNode.cpp)
 target_include_directories(system_control_node PRIVATE .)
@@ -53,10 +53,16 @@ ament_target_dependencies(system_control_node rclcpp geometry_msgs nav_msgs sens
     std_srvs
 )
 
+add_executable(terrain_map_node SYSTEM_CONTROL/terrain_map_node.cpp)
+target_include_directories(terrain_map_node PRIVATE .)
+target_link_libraries(terrain_map_node terrain_lib)
+ament_target_dependencies(terrain_map_node rclcpp nav_msgs sensor_msgs tf2 tf2_ros)
+
 install(TARGETS
     parrot_node
     husky_node
     system_control_node
+    terrain_map_node
     DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -12,6 +12,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -71,8 +72,9 @@ cv::Mat colourMap(const cv::Mat& values, int map)
 
 }  // namespace
 
-ThermalCamera::ThermalCamera(rclcpp::Node* node)
+ThermalCamera::ThermalCamera(rclcpp::Node* node, std::function<bool(double)> aimAtBearing)
     : node_(node),
+      aimAtBearing_(std::move(aimAtBearing)),
       heatThresholdC_(node_->declare_parameter<double>("heat_threshold_c", 30.0)),
       horizontalFovDeg_(node_->declare_parameter<double>("thermal_horizontal_fov_deg", 120.0)),
       cameraHeightM_(node_->declare_parameter<double>("camera_height_m", 0.25)),
@@ -80,7 +82,8 @@ ThermalCamera::ThermalCamera(rclcpp::Node* node)
       cameraPitchDeg_(node_->declare_parameter<double>("camera_pitch_deg", 20.0)),
       syncToleranceS_(node_->declare_parameter<double>("camera_sync_tolerance_s", 0.5)),
       confirmationDistanceM_(node_->declare_parameter<double>("detection_confirmation_distance_m", 2.0)),
-      minimumBlobArea_(node_->declare_parameter<int>("minimum_heat_blob_area", 4)),
+      minimumBlobArea_(node_->declare_parameter<int>("minimum_heat_blob_area", 1)),
+      morphologyKernelSize_(node_->declare_parameter<int>("thermal_morphology_kernel_size", 3)),
       confirmationFrames_(node_->declare_parameter<int>("detection_confirmation_frames", 3)),
       showWindows_(node_->declare_parameter<bool>("show_camera_windows", false))
 {
@@ -104,6 +107,22 @@ ThermalCamera::ThermalCamera(rclcpp::Node* node)
         cv::namedWindow("Thermal Camera", cv::WINDOW_NORMAL);
         cv::namedWindow("Depth Camera", cv::WINDOW_NORMAL);
     }
+    thermalThread_ = std::thread([this] {
+        while (true) {
+            sensor_msgs::msg::Image::ConstSharedPtr msg;
+            {
+                std::unique_lock<std::mutex> lock(thermalQueueMutex_);
+                thermalQueueCondition_.wait(lock, [this] {
+                    return shuttingDown_ || pendingThermal_;
+                });
+                if (shuttingDown_ && !pendingThermal_) {
+                    return;
+                }
+                msg = std::move(pendingThermal_);
+            }
+            processThermal(msg);
+        }
+    });
     RCLCPP_INFO(node_->get_logger(),
                 "Thermal detection listening on %s and %s (confirmation: %d frames)",
                 thermalTopic.c_str(), depthTopic.c_str(), confirmationFrames_);
@@ -111,6 +130,14 @@ ThermalCamera::ThermalCamera(rclcpp::Node* node)
 
 ThermalCamera::~ThermalCamera()
 {
+    {
+        std::lock_guard<std::mutex> lock(thermalQueueMutex_);
+        shuttingDown_ = true;
+    }
+    thermalQueueCondition_.notify_one();
+    if (thermalThread_.joinable()) {
+        thermalThread_.join();
+    }
     if (showWindows_) {
         cv::destroyWindow("Thermal Camera");
         cv::destroyWindow("Depth Camera");
@@ -122,17 +149,22 @@ void ThermalCamera::onDepth(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
     try {
         const auto image = cv_bridge::toCvShare(msg, msg->encoding);
         if (image->image.type() == CV_32FC1) {
+            std::lock_guard<std::mutex> lock(dataMutex_);
             latestDepth_ = image->image.clone();
         } else if (image->image.type() == CV_16UC1) {
+            std::lock_guard<std::mutex> lock(dataMutex_);
             image->image.convertTo(latestDepth_, CV_32FC1, 0.001);
         } else {
             RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 5000,
                                  "Unsupported depth encoding: %s", msg->encoding.c_str());
             return;
         }
-        latestDepthStamp_ = rclcpp::Time(msg->header.stamp);
+        {
+            std::lock_guard<std::mutex> lock(dataMutex_);
+            latestDepthStamp_ = rclcpp::Time(msg->header.stamp);
+        }
         if (showWindows_) {
-            showDepth(latestDepth_);
+            showDepth(image->image);
         }
     } catch (const cv_bridge::Exception& error) {
         RCLCPP_ERROR(node_->get_logger(), "Could not decode depth frame: %s", error.what());
@@ -141,11 +173,21 @@ void ThermalCamera::onDepth(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
 
 void ThermalCamera::onOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr& msg)
 {
+    std::lock_guard<std::mutex> lock(dataMutex_);
     latestOdometry_ = msg;
     latestOdometryStamp_ = rclcpp::Time(msg->header.stamp);
 }
 
 void ThermalCamera::onThermal(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
+{
+    {
+        std::lock_guard<std::mutex> lock(thermalQueueMutex_);
+        pendingThermal_ = msg;
+    }
+    thermalQueueCondition_.notify_one();
+}
+
+void ThermalCamera::processThermal(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
 {
     try {
         const auto image = cv_bridge::toCvShare(msg, msg->encoding);
@@ -163,6 +205,7 @@ void ThermalCamera::onThermal(const sensor_msgs::msg::Image::ConstSharedPtr& msg
         }
         const auto candidate = locateCasualty(temperatures, *msg);
         if (!candidate) {
+            std::lock_guard<std::mutex> lock(dataMutex_);
             matchingFrames_ = 0;
             pendingCandidate_.reset();
             return;
@@ -171,6 +214,7 @@ void ThermalCamera::onThermal(const sensor_msgs::msg::Image::ConstSharedPtr& msg
             return;
         }
 
+        std::lock_guard<std::mutex> lock(dataMutex_);
         const auto alreadyKnown = std::find_if(
             casualties_.begin(), casualties_.end(), [&](const auto& casualty) {
                 return std::hypot(candidate->point.x - casualty.position.point.x,
@@ -192,6 +236,7 @@ void ThermalCamera::onThermal(const sensor_msgs::msg::Image::ConstSharedPtr& msg
                         index, casualties_.back().gridX, casualties_.back().gridY,
                         candidate->point.x, candidate->point.y, candidate->point.z,
                         candidate->header.frame_id.c_str());
+            casualtyDetected_.store(true, std::memory_order_release);
         }
     } catch (const cv_bridge::Exception& error) {
         RCLCPP_ERROR(node_->get_logger(), "Could not decode thermal frame: %s", error.what());
@@ -200,11 +245,18 @@ void ThermalCamera::onThermal(const sensor_msgs::msg::Image::ConstSharedPtr& msg
 
 std::vector<Casualty> ThermalCamera::getCasualties() const
 {
+    std::lock_guard<std::mutex> lock(dataMutex_);
     return casualties_;
+}
+
+bool ThermalCamera::hasDetectedCasualty() const
+{
+    return casualtyDetected_.load(std::memory_order_acquire);
 }
 
 bool ThermalCamera::confirmCasualty(std::size_t index)
 {
+    std::lock_guard<std::mutex> lock(dataMutex_);
     if (index == 0 || index > casualties_.size()) {
         return false;
     }
@@ -214,6 +266,7 @@ bool ThermalCamera::confirmCasualty(std::size_t index)
 
 bool ThermalCamera::denyCasualty(std::size_t index)
 {
+    std::lock_guard<std::mutex> lock(dataMutex_);
     if (index == 0 || index > casualties_.size()) {
         return false;
     }
@@ -224,12 +277,23 @@ bool ThermalCamera::denyCasualty(std::size_t index)
 std::optional<geometry_msgs::msg::PointStamped> ThermalCamera::locateCasualty(
     const cv::Mat& temperatures, const sensor_msgs::msg::Image& thermalMsg)
 {
-    if (latestDepth_.empty() || !latestOdometry_) {
+    cv::Mat latestDepth;
+    nav_msgs::msg::Odometry::ConstSharedPtr latestOdometry;
+    rclcpp::Time latestDepthStamp;
+    rclcpp::Time latestOdometryStamp;
+    {
+        std::lock_guard<std::mutex> lock(dataMutex_);
+        latestDepth = latestDepth_.clone();
+        latestOdometry = latestOdometry_;
+        latestDepthStamp = latestDepthStamp_;
+        latestOdometryStamp = latestOdometryStamp_;
+    }
+    if (latestDepth.empty() || !latestOdometry) {
         return std::nullopt;
     }
     const rclcpp::Time thermalStamp(thermalMsg.header.stamp);
-    if (std::abs((thermalStamp - latestDepthStamp_).seconds()) > syncToleranceS_ ||
-        std::abs((thermalStamp - latestOdometryStamp_).seconds()) > syncToleranceS_) {
+    if (std::abs((thermalStamp - latestDepthStamp).seconds()) > syncToleranceS_ ||
+        std::abs((thermalStamp - latestOdometryStamp).seconds()) > syncToleranceS_) {
         return std::nullopt;
     }
 
@@ -239,7 +303,8 @@ std::optional<geometry_msgs::msg::PointStamped> ThermalCamera::locateCasualty(
     }
     cv::Mat hotMask;
     cv::compare(temperatures, adaptiveThreshold, hotMask, cv::CMP_GE);
-    const cv::Mat kernel = cv::Mat::ones(5, 5, CV_8UC1);
+    const int kernelSize = std::max(1, morphologyKernelSize_ | 1);
+    const cv::Mat kernel = cv::Mat::ones(kernelSize, kernelSize, CV_8UC1);
     cv::morphologyEx(hotMask, hotMask, cv::MORPH_OPEN, kernel);
     cv::morphologyEx(hotMask, hotMask, cv::MORPH_CLOSE, kernel);
 
@@ -253,10 +318,10 @@ std::optional<geometry_msgs::msg::PointStamped> ThermalCamera::locateCasualty(
     }
 
     cv::Mat depth;
-    if (latestDepth_.size() == temperatures.size()) {
-        depth = latestDepth_;
+    if (latestDepth.size() == temperatures.size()) {
+        depth = latestDepth;
     } else {
-        cv::resize(latestDepth_, depth, temperatures.size(), 0.0, 0.0, cv::INTER_NEAREST);
+        cv::resize(latestDepth, depth, temperatures.size(), 0.0, 0.0, cv::INTER_NEAREST);
     }
 
     int bestComponent = -1;
@@ -329,11 +394,16 @@ std::optional<geometry_msgs::msg::PointStamped> ThermalCamera::locateCasualty(
     const double pixelX = median(xs);
     const double pixelY = median(ys);
     const double distance = median(depths);
-    lastHeatPixel_ = std::make_pair(pixelX, pixelY);
 
     const double pi = std::acos(-1.0);
     const double focal = temperatures.cols /
         (2.0 * std::tan(horizontalFovDeg_ * pi / 360.0));
+    const double bearing = std::atan2(-(pixelX - (temperatures.cols - 1) / 2.0),
+                                      focal);
+    if (aimAtBearing_ && !aimAtBearing_(bearing)) {
+        return std::nullopt;
+    }
+    lastHeatPixel_ = std::make_pair(pixelX, pixelY);
     const double centerX = (temperatures.cols - 1) / 2.0;
     const double centerY = (temperatures.rows - 1) / 2.0;
     const double cameraX = distance;
@@ -346,7 +416,7 @@ std::optional<geometry_msgs::msg::PointStamped> ThermalCamera::locateCasualty(
     const double baseZ = -std::sin(cameraPitch) * cameraX +
                          std::cos(cameraPitch) * cameraZ + cameraHeightM_;
 
-    const auto& pose = latestOdometry_->pose.pose;
+    const auto& pose = latestOdometry->pose.pose;
     const auto& q = pose.orientation;
     const double r00 = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
     const double r01 = 2.0 * (q.x * q.y - q.z * q.w);
@@ -360,7 +430,7 @@ std::optional<geometry_msgs::msg::PointStamped> ThermalCamera::locateCasualty(
 
     geometry_msgs::msg::PointStamped result;
     result.header.stamp = thermalMsg.header.stamp;
-    result.header.frame_id = latestOdometry_->header.frame_id;
+    result.header.frame_id = latestOdometry->header.frame_id;
     result.point.x = pose.position.x + r00 * baseX + r01 * baseY + r02 * baseZ;
     result.point.y = pose.position.y + r10 * baseX + r11 * baseY + r12 * baseZ;
     result.point.z = pose.position.z + r20 * baseX + r21 * baseY + r22 * baseZ;

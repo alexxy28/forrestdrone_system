@@ -12,6 +12,8 @@
 
 namespace {
 
+constexpr double casualtyStandOffDistanceM = 5.0;
+
 const char* toString(int state) 
 {
 static const char* names[] = {"WAITING_FOR_ODOM", "CLIMBING", "IDLE", "SEARCHING", "HOLDING", "PAUSED"};
@@ -48,8 +50,10 @@ ParrotNode::ParrotNode()
 parrot_(this,
 declare_parameter<double>("max_speed", 1.5),
 declare_parameter<double>("goal_tolerance", 1.0),
-declare_parameter<double>("target_altitude", 20.0)),
-thermalCamera_(this)
+declare_parameter<double>("target_altitude", 7.0)),   // m above ground
+thermalCamera_(this, [this](double bearing) {
+    return parrot_.aimAtRelativeBearing(bearing);
+})
 {
     // Latched both ways, so it doesn't matter which node starts first.
 const auto latched = rclcpp::QoS(1).reliable().transient_local();
@@ -62,6 +66,10 @@ pathSub_ = create_subscription<nav_msgs::msg::Path>(
     std::bind(&ParrotNode::onMissionPath, this, std::placeholders::_1));
 statusPub_ = create_publisher<std_msgs::msg::String>(statusTopic, latched);
 casualtyPub_ = create_publisher<geometry_msgs::msg::PointStamped>(topics::CASUALTY, latched);
+casualtyDiscoveredPub_ = create_publisher<std_msgs::msg::Bool>("/CasulityDiscovered", latched);
+casualtyConfirmedSub_ = create_subscription<std_msgs::msg::Bool>(
+    "/CasulityConfirmed", latched,
+    std::bind(&ParrotNode::onCasualtyConfirmed, this, std::placeholders::_1));
 
 // Stop button: true = freeze in place, false = carry on.
 const std::string stopTopic = declare_parameter<std::string>("stop_topic", "/parrot1/estop");
@@ -79,6 +87,11 @@ std::vector<Casualty> ParrotNode::getCasualties() const
     return thermalCamera_.getCasualties();
 }
 
+bool ParrotNode::hasDetectedCasualty() const
+{
+    return thermalCamera_.hasDetectedCasualty();
+}
+
 bool ParrotNode::confirmCasualty(std::size_t index)
 {
     const auto casualties = thermalCamera_.getCasualties();
@@ -91,6 +104,11 @@ bool ParrotNode::confirmCasualty(std::size_t index)
     }
     casualtyPub_->publish(casualties[index - 1].position);
     RCLCPP_INFO(get_logger(), "Confirmed casualty %zu sent to mission control for Husky routing", index);
+    if (pendingCasualtyIndex_ && *pendingCasualtyIndex_ == index &&
+        awaitingCasualtyConfirmation_) {
+        casualtyConfirmationReceived_ = true;
+        casualtyConfirmed_ = true;
+    }
     return true;
 }
 
@@ -138,9 +156,65 @@ void ParrotNode::onStop(const std_msgs::msg::Bool::SharedPtr msg)
     }
 }
 
+void ParrotNode::onCasualtyConfirmed(const std_msgs::msg::Bool::SharedPtr msg)
+{
+    if (!awaitingCasualtyConfirmation_) {
+        return;
+    }
+    casualtyConfirmationReceived_ = true;
+    casualtyConfirmed_ = msg->data;
+    RCLCPP_INFO(get_logger(), "Casualty confirmation received: %s",
+                msg->data ? "true" : "false");
+}
+
+void ParrotNode::startCasualtyReview(const Casualty& casualty)
+{
+    const double casualtyX = casualty.position.point.x;
+    const double casualtyY = casualty.position.point.y;
+    const double fromCasualtyX = parrot_.x() - casualtyX;
+    const double fromCasualtyY = parrot_.y() - casualtyY;
+    const double distanceFromCasualty = std::hypot(fromCasualtyX, fromCasualtyY);
+    const double directionX = distanceFromCasualty > 1e-6 ? fromCasualtyX / distanceFromCasualty : 1.0;
+    const double directionY = distanceFromCasualty > 1e-6 ? fromCasualtyY / distanceFromCasualty : 0.0;
+    const std::pair<double, double> target{
+        casualtyX + directionX * casualtyStandOffDistanceM,
+        casualtyY + directionY * casualtyStandOffDistanceM};
+
+    if (!verifyTarget_ && patrolMissionActive_) {
+        patrolWaypoints_ = parrot_.remainingWaypoints();
+    }
+    verifyTarget_ = target;
+    verifyCasualtyIndex_ = casualty.index;
+    RCLCPP_WARN(get_logger(),
+                "Patrol paused: casualty detected at (%.2f, %.2f); flying to review point "
+                "%.2f m away at (%.2f, %.2f)",
+                casualtyX, casualtyY, casualtyStandOffDistanceM,
+                target.first, target.second);
+    parrot_.setWaypoints({target});
+    hasMission_ = true;
+}
+
+void ParrotNode::trimPatrolWaypointsAlreadyPassed()
+{
+    while (patrolWaypoints_.size() > 1) {
+        const auto& first = patrolWaypoints_[0];
+        const auto& next = patrolWaypoints_[1];
+        const double firstDistance = std::hypot(first.first - parrot_.x(),
+                                                first.second - parrot_.y());
+        const double nextDistance = std::hypot(next.first - parrot_.x(),
+                                               next.second - parrot_.y());
+        if (firstDistance <= 1.0 || nextDistance < firstDistance) {
+            patrolWaypoints_.erase(patrolWaypoints_.begin());
+            continue;
+        }
+        break;
+    }
+}
+
 void ParrotNode::tick()
 {
-    // Worked out fresh each cycle: a drone that drifts off altitude goes back to climbing.
+    // Worked out fresh each cycle. CLIMBING only happens once: after that the
+    // drone holds its height above ground while it flies.
 if (!parrot_.ready()) {
 setState(State::WAITING_FOR_ODOM);
 return;
@@ -160,29 +234,105 @@ parrot_.climb();
 return;
     }
 
-if (const auto casualty = selectCasualtyForVerification()) {
-    const std::pair<double, double> target{casualty->position.point.x, casualty->position.point.y};
-    if (!verifyTarget_ || std::hypot(target.first - verifyTarget_->first,
-                                      target.second - verifyTarget_->second) > 0.25) {
-        if (!verifyTarget_ && patrolMissionActive_) {
-            patrolWaypoints_ = parrot_.remainingWaypoints();
-        }
-        verifyTarget_ = target;
-        // Keep the mission-control route so it can be restored after review.
-        RCLCPP_WARN(get_logger(),
-                    "Patrol paused: casualty detected at (%.2f, %.2f); confirming by flying there",
-                    target.first, target.second);
-        parrot_.setWaypoints({target});
-        hasMission_ = true;
-    }
-    setState(State::SEARCHING);
-    parrot_.flyToWaypoint();
+if (awaitingCasualtyConfirmation_) {
+if (!casualtyConfirmationReceived_) {
+    setState(State::PAUSED);
+    parrot_.hold();
     return;
 }
 
+awaitingCasualtyConfirmation_ = false;
+casualtyConfirmationReceived_ = false;
+if (!casualtyConfirmed_) {
+    if (pendingCasualtyIndex_) {
+        denyCasualty(*pendingCasualtyIndex_);
+    }
+    pendingCasualtyIndex_.reset();
+    casualtyConfirmed_ = false;
+} else {
+    const auto casualties = thermalCamera_.getCasualties();
+    const auto casualty = pendingCasualtyIndex_
+        ? std::find_if(casualties.begin(), casualties.end(), [&](const auto& item) {
+              return item.index == *pendingCasualtyIndex_;
+          })
+        : casualties.end();
+    if (casualty != casualties.end()) {
+        confirmCasualty(casualty->index);
+        startCasualtyReview(*casualty);
+        setState(State::SEARCHING);
+        parrot_.flyToWaypoint();
+        return;
+    }
+    pendingCasualtyIndex_.reset();
+    casualtyConfirmed_ = false;
+}
+}
+
+if (!verifyTarget_) {
+if (const auto casualty = selectCasualtyForVerification()) {
+pendingCasualtyIndex_ = casualty->index;
+awaitingCasualtyConfirmation_ = true;
+casualtyConfirmationReceived_ = false;
+casualtyConfirmed_ = false;
+std_msgs::msg::Bool discovered;
+discovered.data = true;
+casualtyDiscoveredPub_->publish(discovered);
+RCLCPP_WARN(get_logger(),
+            "Casualty %zu discovered; published true on /CasulityDiscovered and "
+            "waiting indefinitely for /CasulityConfirmed",
+            casualty->index);
+setState(State::PAUSED);
+parrot_.hold();
+return;
+}
+}
+
 if (verifyTarget_) {
+    const auto casualties = thermalCamera_.getCasualties();
+    const auto casualty = verifyCasualtyIndex_
+        ? std::find_if(casualties.begin(), casualties.end(), [&](const auto& item) {
+              return item.index == *verifyCasualtyIndex_;
+          })
+        : casualties.end();
+
+    if (casualty != casualties.end() &&
+        casualty->status == CasualtyStatus::CONFIRMED &&
+        !casualtyOrbitActive_) {
+        constexpr int orbitPointCount = 8;
+        constexpr double orbitRadiusM = casualtyStandOffDistanceM;
+        const double pi = std::acos(-1.0);
+        std::vector<std::pair<double, double>> orbitWaypoints;
+        orbitWaypoints.reserve(orbitPointCount + 1);
+        for (int point = 0; point <= orbitPointCount; ++point) {
+            const double angle = 2.0 * pi * point / orbitPointCount;
+            orbitWaypoints.emplace_back(
+                casualty->position.point.x + orbitRadiusM * std::cos(angle),
+                casualty->position.point.y + orbitRadiusM * std::sin(angle));
+        }
+        casualtyOrbitActive_ = true;
+        RCLCPP_INFO(get_logger(),
+                    "Casualty %zu confirmed; circling at %.2f m before resuming patrol",
+                    *verifyCasualtyIndex_, orbitRadiusM);
+        parrot_.setWaypoints(orbitWaypoints);
+        hasMission_ = true;
+        setState(State::SEARCHING);
+        parrot_.flyToWaypoint();
+        return;
+    }
+
+    if (casualtyOrbitActive_) {
+        if (!parrot_.searchComplete()) {
+            setState(State::SEARCHING);
+            parrot_.flyToWaypoint();
+            return;
+        }
+        casualtyOrbitActive_ = false;
+    }
+
     verifyTarget_.reset();
+    verifyCasualtyIndex_.reset();
     if (patrolMissionActive_) {
+        trimPatrolWaypointsAlreadyPassed();
         RCLCPP_INFO(get_logger(), "Casualty reviewed; resuming patrol (%zu waypoints)",
                     patrolWaypoints_.size());
         parrot_.setWaypoints(patrolWaypoints_);

@@ -11,6 +11,7 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rqt_gui_py.plugin import Plugin
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
+from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool
 
 
@@ -248,7 +249,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         )
         self._z_range_text = f'low {z_min:.3f} m  /  high {z_max:.3f} m'
         return image.copy()
-
+        
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
         painter.fillRect(self.rect(), Qt.black)
@@ -414,7 +415,7 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if not clean_name or self._node is None:
             return None
         if clean_name not in self._publishers:
-            self._publishers[clean_name] = self._node.create_publisher(Bool, f'/{clean_name}/estop', 10)
+            self._publishers[clean_name] = self._node.create_publisher(Bool, f'mission_control/{clean_name}/estop', 10)
         return self._publishers[clean_name]
 
     def _ensure_subscription(self, robot_name: str):
@@ -424,7 +425,7 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if clean_name not in self._subscriptions:
             self._subscriptions[clean_name] = self._node.create_subscription(
                 Bool,
-                f'/{clean_name}/estop',
+                f'{clean_name}/estop',
                 lambda msg, name=clean_name: self._estop_state_cb(name, msg),
                 10,
             )
@@ -451,8 +452,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._robot_states[robot_name] = not bool(msg.data)
 
     def _update_labels(self) -> None:
-        self._husky_button.setText('Stop Husky' if self._robot_states.get('husky1', True) else 'Start Husky')
-        self._parrot_button.setText('Stop Parrot' if self._robot_states.get('parrot1', True) else 'Start Parrot')
+        self._husky_button.setText('Stop Husky' if self._robot_states.get('husky1', False) else 'Start Husky')
+        self._parrot_button.setText('Stop Parrot' if self._robot_states.get('parrot1', False) else 'Start Parrot')
 
     def _trigger_waypoint_accept(self) -> None:
         if self._node is None:

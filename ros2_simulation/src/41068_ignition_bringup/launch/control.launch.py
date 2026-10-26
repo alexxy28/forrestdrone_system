@@ -20,10 +20,10 @@ def generate_launch_description():
         'nodes',
         default_value='all',
         description='Nodes to start: all, or a comma-separated list of '
-                    'system_control, husky, parrot',
+                    'system_control, husky, parrot, terrain_map',
     ))
 
-    for name in ('system_control', 'husky', 'parrot'):
+    for name in ('system_control', 'husky', 'parrot', 'terrain_map'):
         ld.add_action(Node(
             package='control_template',
             executable=name + '_node',

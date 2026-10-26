@@ -1,3 +1,12 @@
+
+// source ~/rs1_ws/install/setup.bash
+//ros2 service call /mission/start std_srvs/srv/Trigger
+//what algorithm is used, what is the input and output, 
+// look at the techincal in canvas and understand it 
+// user needs to gain control of the system 
+// go into depth on the technical rules and pick one that is relevent and explain it 
+// desiciion making, rover compentition 
+
 #ifndef SYSTEM_CONTROL_NODE_HPP
 #define SYSTEM_CONTROL_NODE_HPP
 
@@ -11,6 +20,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <std_msgs/msg/bool.hpp>
 
 #include <memory>
 #include <string>
@@ -67,6 +77,11 @@ class SystemControlNode : public rclcpp::Node{
     rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr clickedSub_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr startSrv_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stopSrv_;
+
+    // UI stop button -> drone
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr uiParrotEstopSub_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr parrotEstopPub_;
+    void uiParrotEstopCallback(const std_msgs::msg::Bool::SharedPtr msg);
 
     State state_{State::SEARCHING};
     int routeStep_;

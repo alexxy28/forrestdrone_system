@@ -26,7 +26,6 @@ install(
   PROGRAMS
     scripts/dynamic_world_demo.py
     scripts/basic_autonomy_demo.py
-    scripts/terrain_map_builder.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

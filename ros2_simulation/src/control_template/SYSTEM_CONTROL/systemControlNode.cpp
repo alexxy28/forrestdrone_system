@@ -41,8 +41,8 @@ std::vector<std::pair<double, double>> simplifyRoute(
 SystemControlNode::SystemControlNode()
     : Node("system_control_node"),
       terrainMap_(declare_parameter<double>("terrain_resolution", 0.5),
-                  declare_parameter<double>("terrain_size_x", 20.0),
-                  declare_parameter<double>("terrain_size_y", 20.0)),
+                  declare_parameter<double>("terrain_size_x", 40.0),
+                  declare_parameter<double>("terrain_size_y", 40.0)),
       terrainPlanner_(terrainMap_),
       routeStep_(declare_parameter<int>("route_step", 2))
 {
@@ -91,6 +91,12 @@ SystemControlNode::SystemControlNode()
         clickedTopic, 10,
         std::bind(&SystemControlNode::clickedPointCallback, this, std::placeholders::_1));
 
+    // ---- UI stop button: Ben's UI -> mission control -> drone ----
+    parrotEstopPub_ = create_publisher<std_msgs::msg::Bool>("/parrot1/estop", 10);
+    uiParrotEstopSub_ = create_subscription<std_msgs::msg::Bool>(
+        "/mission_control/parrot1/estop", 10,
+        std::bind(&SystemControlNode::uiParrotEstopCallback, this, std::placeholders::_1));
+
     startSrv_ = create_service<std_srvs::srv::Trigger>(
         "/mission/start",
         std::bind(&SystemControlNode::startSearch, this, std::placeholders::_1, std::placeholders::_2));
@@ -105,8 +111,11 @@ SystemControlNode::SystemControlNode()
     setState(State::SEARCHING);
     RCLCPP_INFO(get_logger(),
                 "Mission control ready. Search area x %.1f..%.1f, y %.1f..%.1f. "
+                "Terrain map %.1f x %.1f m. "
                 "Start with: ros2 service call /mission/start std_srvs/srv/Trigger",
-                areaX0_, areaX0_ + areaWidth_, areaY0_, areaY0_ + areaHeight_);
+                areaX0_, areaX0_ + areaWidth_, areaY0_, areaY0_ + areaHeight_,
+                get_parameter("terrain_size_x").as_double(),
+                get_parameter("terrain_size_y").as_double());
 }
 
 void SystemControlNode::terrainCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
@@ -295,4 +304,12 @@ int main(int argc, char* argv[])
     rclcpp::spin(std::make_shared<SystemControlNode>());
     rclcpp::shutdown();
     return 0;
+}
+
+void SystemControlNode::uiParrotEstopCallback(const std_msgs::msg::Bool::SharedPtr msg)
+{
+    std_msgs::msg::Bool out;
+    out.data = msg->data;
+    parrotEstopPub_->publish(out);
+    RCLCPP_INFO(get_logger(), "UI: parrot %s", msg->data ? "STOP" : "START");
 }
