@@ -79,7 +79,7 @@ ThermalCamera::ThermalCamera(rclcpp::Node* node, std::function<bool(double)> aim
       horizontalFovDeg_(node_->declare_parameter<double>("thermal_horizontal_fov_deg", 120.0)),
       cameraHeightM_(node_->declare_parameter<double>("camera_height_m", 0.25)),
       cameraForwardM_(node_->declare_parameter<double>("camera_forward_m", 0.25)),
-      cameraPitchDeg_(node_->declare_parameter<double>("camera_pitch_deg", 20.0)),
+      cameraPitchDeg_(node_->declare_parameter<double>("camera_pitch_deg", 45.0)),  // matches camera_joint rpy in parrot.urdf.xacro
       syncToleranceS_(node_->declare_parameter<double>("camera_sync_tolerance_s", 0.5)),
       confirmationDistanceM_(node_->declare_parameter<double>("detection_confirmation_distance_m", 2.0)),
       minimumBlobArea_(node_->declare_parameter<int>("minimum_heat_blob_area", 1)),

@@ -45,6 +45,14 @@ public:
         terrainPub_ = create_publisher<PointCloud2>(
             topics::PARROT_TERRAIN, rclcpp::SensorDataQoS());
 
+        // Saved map from a previous scan (ros2 bag play ... --remap
+        // /parrot1/terrain_points:=/parrot1/terrain_seed). Only the first cloud
+        // is used; its cell counts act as prior weight, so live scans keep
+        // refining it and gradually replace it (COUNT_CAP in TerrainMap).
+        seedSub_ = create_subscription<PointCloud2>(
+            topics::PARROT_TERRAIN_SEED, rclcpp::SensorDataQoS(),
+            std::bind(&TerrainMapNode::seedCallback, this, std::placeholders::_1));
+
         RCLCPP_INFO(get_logger(), "Terrain accumulation started: %s + %s -> %s in frame %s",
                     topics::PARROT_SCAN, topics::PARROT_ODOM, topics::PARROT_TERRAIN,
                     mapFrame_.c_str());
@@ -93,6 +101,23 @@ private:
                                     }),
                      points.end());
         return before - points.size();
+    }
+
+    void seedCallback(const PointCloud2::SharedPtr msg)
+    {
+        if (seedSub_ == nullptr)
+            return;   // already seeded
+        if (msg->header.frame_id != mapFrame_) {
+            RCLCPP_ERROR(get_logger(), "Ignoring seed map: frame '%s' is not map frame '%s'",
+                         msg->header.frame_id.c_str(), mapFrame_.c_str());
+            return;
+        }
+        // Replaces the few seconds of live returns gathered before the seed arrived.
+        map_.updateFromPointCloud(*msg);
+        terrainPub_->publish(map_.toCloud(mapFrame_, msg->header.stamp));
+        RCLCPP_INFO(get_logger(), "Seeded terrain map with %u saved cells", msg->width * msg->height);
+        map_.printStatistics();
+        seedSub_.reset();   // stop listening; a looping bag can't overwrite live data
     }
 
     void scanCallback(const PointCloud2::SharedPtr msg)
@@ -173,6 +198,7 @@ private:
 
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odomSub_;
     rclcpp::Subscription<PointCloud2>::SharedPtr scanSub_;
+    rclcpp::Subscription<PointCloud2>::SharedPtr seedSub_;
     rclcpp::Publisher<PointCloud2>::SharedPtr terrainPub_;
 
     nav_msgs::msg::Odometry::SharedPtr odom_;

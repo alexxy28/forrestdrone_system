@@ -35,6 +35,7 @@ inline constexpr char PARROT_ODOM[]    = "/parrot1/odometry";        // nav_msgs
 inline constexpr char PARROT_CMD_VEL[] = "/parrot1/cmd_vel";         // geometry_msgs/Twist, parrot -> sim
 inline constexpr char PARROT_SCAN[]    = "/parrot1/scan/points";     // sensor_msgs/PointCloud2, sim -> terrain_map
 inline constexpr char PARROT_TERRAIN[] = "/parrot1/terrain_points";  // sensor_msgs/PointCloud2 (x, y, z, sigma, count), terrain_map -> control
+inline constexpr char PARROT_TERRAIN_SEED[] = "/parrot1/terrain_seed";  // same format, saved map (ros2 bag) -> terrain_map, first message only
 inline constexpr char PARROT_TF[]        = "/parrot1/tf";            // tf2_msgs/TFMessage, sim -> terrain_map
 inline constexpr char PARROT_TF_STATIC[] = "/parrot1/tf_static";     // tf2_msgs/TFMessage, sim -> terrain_map
 inline constexpr char PARROT_THERMAL[] = "/parrot1/thermal_camera";  // sensor_msgs/Image, sim -> parrot

@@ -20,6 +20,8 @@ class TerrainMapWidget(QtWidgets.QWidget):
     RESOLUTION = 0.5
     SIZE_X = 40.0
     SIZE_Y = 40.0
+    # Height (m) at which each colour is pure: green, yellow, orange, red.
+    HEIGHT_STOPS_M = [-0.32, 1, 2, 3.0]
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -220,26 +222,15 @@ class TerrainMapWidget(QtWidgets.QWidget):
 
         z_min = float(np.min(elevation[known]))
         z_max = float(np.max(elevation[known]))
-        z_range = z_max - z_min
 
-        if z_range <= 1e-6 and self._height_max > self._height_min:
-            z_min = self._height_min
-            z_max = self._height_max
-            z_range = z_max - z_min
-
-        if z_range <= 1e-6:
-            z_min -= 1e-3
-            z_max += 1e-3
-            z_range = z_max - z_min
-
-        ratio = np.clip((elevation - z_min) / z_range, 0.0, 1.0)
-        ratio = np.where(known, ratio, 0.0)
-
-        rgb = np.zeros((self.grid_height, self.grid_width, 3), dtype=np.uint8)
-        red = np.clip(ratio * 255.0, 0.0, 255.0).astype(np.uint8)
-        green = np.clip((1.0 - ratio) * 255.0, 0.0, 255.0).astype(np.uint8)
-        rgb[..., 0] = red
-        rgb[..., 1] = green
+        # Colours are pinned to heights in metres, not stretched over min..max:
+        # terrain_demo ground spans -0.32..10.6 m but ~95% of it is below 4 m, so a
+        # min..max stretch would squash most of the ground into one colour.
+        # Anything above the last stop stays red. Tune HEIGHT_STOPS_M for other worlds.
+        stops = np.array([[0, 200, 0], [255, 255, 0], [255, 140, 0], [255, 0, 0]], dtype=np.float64)
+        heights = np.where(known, elevation, self.HEIGHT_STOPS_M[0])
+        rgb = np.stack([np.interp(heights, self.HEIGHT_STOPS_M, stops[:, c]) for c in range(3)],
+                       axis=-1).astype(np.uint8)
         rgb[~known] = 0
 
         rgb = np.ascontiguousarray(rgb[::-1])
@@ -321,7 +312,8 @@ class TerrainMapWidget(QtWidgets.QWidget):
         painter.setPen(QPen(QColor(255, 255, 255)))
         painter.drawText(
             8, 16,
-            f'{self._z_range_text}  (green = low, red = high)  '
+            f'{self._z_range_text}  (green {self.HEIGHT_STOPS_M[0]:g} m → yellow {self.HEIGHT_STOPS_M[1]:g} '
+            f'→ orange {self.HEIGHT_STOPS_M[2]:g} → red {self.HEIGHT_STOPS_M[3]:g}+ m)  '
             f'cells: {self._known_cells}  points: {self._cloud_points}  '
             f'frame: {self._cloud_frame or "unknown"}',
         )

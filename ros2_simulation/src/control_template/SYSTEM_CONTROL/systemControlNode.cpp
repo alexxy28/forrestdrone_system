@@ -69,11 +69,12 @@ SystemControlNode::SystemControlNode()
     statePub_ = create_publisher<std_msgs::msg::String>(topics::STATE, latched);
 
     // ---- drone tasking ----
-    areaX0_       = declare_parameter<double>("area_x0", -17.0);
-    areaY0_       = declare_parameter<double>("area_y0", -11.0);
-    areaWidth_    = declare_parameter<double>("area_width", 28.0);
-    areaHeight_   = declare_parameter<double>("area_height", 22.0);
-    laneSpacing_  = declare_parameter<double>("lane_spacing", 4.0);
+    // ±18 m covers the ±20 m terrain_demo mesh once the LiDAR's ~4 m side reach is added.
+    areaX0_       = declare_parameter<double>("area_x0", -18.0);
+    areaY0_       = declare_parameter<double>("area_y0", -18.0);
+    areaWidth_    = declare_parameter<double>("area_width", 36.0);
+    areaHeight_   = declare_parameter<double>("area_height", 36.0);
+    laneSpacing_  = declare_parameter<double>("lane_spacing", 6.0);
     clickBoxSize_ = declare_parameter<double>("click_box_size", 8.0);
     missionFrame_ = declare_parameter<std::string>("mission_frame", "world");
 
