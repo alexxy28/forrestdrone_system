@@ -13,7 +13,7 @@ find_package(ros_ign_interfaces REQUIRED)
 ament_python_install_package(rqt_terrain_plugin)
 
 install(
-  DIRECTORY config launch models urdf_husky worlds urdf_parrot
+  DIRECTORY config launch models urdf_husky worlds urdf_parrot pre_scanned_height_maps
   DESTINATION share/${PROJECT_NAME}
 )
 

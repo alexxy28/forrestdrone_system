@@ -10,12 +10,16 @@ WORLD="terrain_demo"
 HUSKY="true"
 PARROT="true"
 RVIZ="true"
+GUI="true"
 NAV2="true"
 SLAM="false"
 LOCAL_ONLY="1"
 BUILD="true"
 CLEAN_BUILD="false"
 ROS_DOMAIN=""
+TRACE="false"
+POSE=""
+PRELOAD_MAP="false"
 
 usage() {
   cat <<'EOF'
@@ -28,6 +32,7 @@ Options:
       --husky-only      Launch only the Husky
       --parrot-only     Launch only the Parrot
       --no-rviz         Do not launch RViz
+      --no-gui          Run Gazebo headless (server only, less CPU)
       --nav2            Enable Nav2
       --no-nav2         Disable Nav2
       --slam            Enable SLAM Toolbox
@@ -36,6 +41,12 @@ Options:
       --domain-id ID    Set ROS_DOMAIN_ID
       --no-build        Use the existing workspace build
       --clean-build     Remove build artifacts before rebuilding
+      --trace           Full TRACE mission (trace_demo.launch.py): sim, SLAM,
+                        control nodes, rqt dashboard, results logger
+      --pose N          Casualty spawn 0-5 (default: random)
+      --preload-map[=true|false]
+                        With --trace: start from the saved terrain map for the
+                        world (pre_scanned_height_maps/WORLD)
   -h, --help            Show this help
 
 Defaults: terrain_demo, both robots, RViz, Nav2, local-only ROS, rebuild enabled.
@@ -61,6 +72,10 @@ while (($# > 0)); do
       ;;
     --no-rviz)
       RVIZ="false"
+      shift
+      ;;
+    --no-gui)
+      GUI="false"
       shift
       ;;
     --nav2)
@@ -96,6 +111,23 @@ while (($# > 0)); do
       CLEAN_BUILD="true"
       shift
       ;;
+    --trace)
+      TRACE="true"
+      shift
+      ;;
+    --pose)
+      [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; exit 2; }
+      POSE="$2"
+      shift 2
+      ;;
+    --preload-map|--preload-map=true)
+      PRELOAD_MAP="true"
+      shift
+      ;;
+    --preload-map=false)
+      PRELOAD_MAP="false"
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -118,6 +150,16 @@ esac
 
 if [[ -n "$ROS_DOMAIN" && ! "$ROS_DOMAIN" =~ ^[0-9]+$ ]]; then
   echo "ROS domain ID must be a non-negative integer." >&2
+  exit 2
+fi
+
+if [[ -n "$POSE" && ! "$POSE" =~ ^[0-5]$ ]]; then
+  echo "Pose must be 0-5." >&2
+  exit 2
+fi
+
+if [[ "$PRELOAD_MAP" == "true" && "$TRACE" != "true" ]]; then
+  echo "--preload-map needs --trace (the map is loaded by the control nodes)." >&2
   exit 2
 fi
 
@@ -162,8 +204,25 @@ if [[ -n "$ROS_DOMAIN" ]]; then
   export ROS_DOMAIN_ID="$ROS_DOMAIN"
 fi
 
+POSE_ARGS=()
+[[ -n "$POSE" ]] && POSE_ARGS=(human_pose:="$POSE")
+MAP_ARGS=()
+[[ "$PRELOAD_MAP" == "true" ]] && MAP_ARGS=(height_map:="$WORLD")
+
+if [[ "$TRACE" == "true" ]]; then
+  echo "Starting TRACE mission: world=$WORLD rviz=$RVIZ gui=$GUI human_pose=${POSE:-random} preload_map=$PRELOAD_MAP"
+  echo "  ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}"
+  # Robots, SLAM and Nav2 are fixed on inside trace_demo, so those flags are ignored here.
+  exec ros2 launch 41068_ignition_bringup trace_demo.launch.py \
+    world:="$WORLD" \
+    rviz:="$RVIZ" \
+    gui:="$GUI" \
+    "${POSE_ARGS[@]}" \
+    "${MAP_ARGS[@]}"
+fi
+
 echo "Starting simulation:"
-echo "  world=$WORLD husky=$HUSKY parrot=$PARROT rviz=$RVIZ nav2=$NAV2 slam=$SLAM"
+echo "  world=$WORLD husky=$HUSKY parrot=$PARROT rviz=$RVIZ gui=$GUI nav2=$NAV2 slam=$SLAM"
 echo "  ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}"
 
 exec ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
@@ -171,5 +230,7 @@ exec ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
   husky:="$HUSKY" \
   parrot:="$PARROT" \
   rviz:="$RVIZ" \
+    gui:="$GUI" \
   nav2:="$NAV2" \
-  slam:="$SLAM"
+  slam:="$SLAM" \
+  "${POSE_ARGS[@]}"

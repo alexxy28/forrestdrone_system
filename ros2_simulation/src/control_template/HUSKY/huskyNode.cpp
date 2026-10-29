@@ -117,6 +117,9 @@ void HuskyNode::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 
 void HuskyNode::casualtyCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg)
 {
+    if (casualty_) {
+        return;  // first confirmed casualty wins, same as system_control_node
+    }
     casualty_ = Waypoint{msg->point.x, msg->point.y};
 }
 

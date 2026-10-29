@@ -14,7 +14,7 @@ Target platform: ROS 2 Humble, Ignition Gazebo Fortress, C++17.
 
 ## Current status
 
-- Parrot search flight: working. Climbs to altitude, visits all 10 waypoints, then holds.
+- Parrot search flight: working. Climbs to altitude, flies a 14-waypoint zigzag over ±18 m (6 m lanes), then holds.
 - Husky route driving: working. Drives a route one waypoint at a time through Nav2 and
   reports its status.
 - Mission state machine: working. Moves from searching to planning when a casualty arrives,
@@ -80,6 +80,17 @@ To start only some of them, pass `nodes` (any of `system_control`, `husky`, `par
 ```bash
 ros2 launch 41068_ignition_bringup control.launch.py nodes:=husky,parrot
 ```
+
+To start with a previously scanned terrain map instead of a blank one, pass `height_map`
+(a folder name in `41068_ignition_bringup/pre_scanned_height_maps/`, or a full bag path).
+The terrain builder loads it once at startup and live LiDAR scans keep refining it:
+
+```bash
+ros2 launch 41068_ignition_bringup control.launch.py height_map:=terrain_demo
+```
+
+To save a new map after a full scan, record `/parrot1/terrain_points` for a few seconds into
+that folder: `ros2 bag record -o <folder> /parrot1/terrain_points`.
 
 ## Node reference
 
