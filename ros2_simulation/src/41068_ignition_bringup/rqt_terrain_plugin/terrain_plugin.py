@@ -22,6 +22,14 @@ class TerrainMapWidget(QtWidgets.QWidget):
     SIZE_Y = 40.0
     # Height (m) at which each colour is pure: green, yellow, orange, red.
     HEIGHT_STOPS_M = [-0.32, 1, 2, 3.0]
+    # View name -> (grid attribute, green/yellow/orange/red stops, unit). Slope and
+    # roughness turn red at the planner's limits: MAX_SLOPE_DEG 25 and MAX_SIGMA_M 0.5
+    # in control_template/SYSTEM_CONTROL/terrain_map.hpp; keep them in step.
+    VIEWS = {
+        'Height': ('_elevation', HEIGHT_STOPS_M, 'm'),
+        'Slope': ('_slope', [0.0, 8.0, 15.0, 25.0], 'deg'),
+        'Roughness': ('_sigma', [0.0, 0.1, 0.25, 0.5], 'm'),
+    }
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -34,6 +42,8 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self.grid_height = 2 * self.half_cells_y + 1
 
         self._elevation: np.ndarray | None = None
+        self._slope: np.ndarray | None = None
+        self._sigma: np.ndarray | None = None
         self._height_min = 0.0
         self._height_max = 1.0
         self._cloud_points = 0
@@ -65,6 +75,26 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self.update)
         self._timer.start(100)
+
+        self._view = 'Height'
+        self._view_button = QtWidgets.QPushButton(self)
+        self._view_button.clicked.connect(self._next_view)
+        self._update_view_button()
+
+    def _next_view(self) -> None:
+        names = list(self.VIEWS)
+        self._view = names[(names.index(self._view) + 1) % len(names)]
+        self._update_view_button()
+        self.update()
+
+    def _update_view_button(self) -> None:
+        self._view_button.setText(f'View: {self._view}  (click to switch)')
+        self._view_button.adjustSize()
+        self._view_button.move(self.width() - self._view_button.width() - 8, 24)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._update_view_button()
 
     def set_node(self, node: Node) -> None:
         self._node = node
@@ -151,10 +181,12 @@ class TerrainMapWidget(QtWidgets.QWidget):
                         pass
         self._subscription = None
 
-    def _extract_xyz(self, msg: PointCloud2) -> np.ndarray:
+    def _extract_points(self, msg: PointCloud2) -> np.ndarray:
+        """(N, 4) array of x, y, z, sigma. sigma is NaN if the cloud has no sigma field."""
+        names = ['x', 'y', 'z'] + (['sigma'] if any(f.name == 'sigma' for f in msg.fields) else [])
         raw_points = point_cloud2.read_points(
             msg,
-            field_names=('x', 'y', 'z'),
+            field_names=names,
             skip_nans=True,
         )
 
@@ -164,48 +196,70 @@ class TerrainMapWidget(QtWidgets.QWidget):
             arr = np.asarray(list(raw_points))
 
         if arr.size == 0:
-            return np.empty((0, 3), dtype=np.float64)
+            return np.empty((0, 4), dtype=np.float64)
 
         if getattr(arr.dtype, 'names', None):
-            return np.column_stack((arr['x'], arr['y'], arr['z'])).astype(np.float64, copy=False)
+            arr = np.column_stack([arr[n] for n in names]).astype(np.float64, copy=False)
+        else:
+            arr = np.asarray(arr, dtype=np.float64)
+            if arr.ndim == 1:
+                arr = arr.reshape(1, -1)
+            if arr.shape[1] < len(names):
+                return np.empty((0, 4), dtype=np.float64)
+            arr = arr[:, :len(names)]
 
-        arr = np.asarray(arr, dtype=np.float64)
-        if arr.ndim == 1:
-            arr = arr.reshape(1, -1)
-        if arr.shape[1] < 3:
-            return np.empty((0, 3), dtype=np.float64)
-        return arr[:, :3]
+        if arr.shape[1] == 3:
+            arr = np.column_stack((arr, np.full(len(arr), np.nan)))
+        return arr
 
-    def _build_elevation(self, xyz: np.ndarray) -> np.ndarray:
-        elevation = np.full((self.grid_height, self.grid_width), np.nan, dtype=np.float64)
+    def _build_grid(self, points: np.ndarray, column: int) -> np.ndarray:
+        """Grid of one point column (2 = z, 3 = sigma); the builder sends one point per cell."""
+        grid = np.full((self.grid_height, self.grid_width), np.nan, dtype=np.float64)
 
-        finite = np.isfinite(xyz).all(axis=1)
-        xyz = xyz[finite]
+        points = points[np.isfinite(points[:, :2]).all(axis=1) & np.isfinite(points[:, column])]
         gx = np.floor(
-            xyz[:, 0] / self.RESOLUTION + self.half_cells_x + 0.5
+            points[:, 0] / self.RESOLUTION + self.half_cells_x + 0.5
         ).astype(np.int64)
         gy = np.floor(
-            xyz[:, 1] / self.RESOLUTION + self.half_cells_y + 0.5
+            points[:, 1] / self.RESOLUTION + self.half_cells_y + 0.5
         ).astype(np.int64)
         valid = (gx >= 0) & (gx < self.grid_width) & (gy >= 0) & (gy < self.grid_height)
-        np.fmax.at(elevation, (gy[valid], gx[valid]), xyz[valid, 2])
+        np.fmax.at(grid, (gy[valid], gx[valid]), points[valid, column])
 
-        return elevation
+        return grid
+
+    def _build_slope(self, elevation: np.ndarray) -> np.ndarray:
+        """Steepest angle (deg) to the 4 neighbours, needing >= 2 known neighbours.
+
+        Same rule as TerrainMap::calculateSlopes, but on every mapped cell: the planner
+        first drops cells with < 3 returns and fills small holes, so it can differ
+        slightly at the edges of scanned areas.
+        """
+        pad = np.pad(elevation, 1, constant_values=np.nan)
+        centre = pad[1:-1, 1:-1]
+        neighbours = np.stack([pad[1:-1, 2:], pad[1:-1, :-2], pad[2:, 1:-1], pad[:-2, 1:-1]])
+        angles = np.degrees(np.arctan2(np.abs(neighbours - centre), self.RESOLUTION))
+        known = np.isfinite(angles)
+        slope = np.where(known, angles, -np.inf).max(axis=0)
+        slope[(known.sum(axis=0) < 2) | ~np.isfinite(centre)] = np.nan
+        return slope
 
     def _cloud_cb(self, msg: PointCloud2) -> None:
         try:
-            xyz = self._extract_xyz(msg)
-            if xyz.size == 0:
+            points = self._extract_points(msg)
+            if points.size == 0:
                 return
 
-            finite_z = xyz[np.isfinite(xyz).all(axis=1), 2]
+            finite_z = points[np.isfinite(points[:, :3]).all(axis=1), 2]
             self._cloud_points = int(finite_z.size)
             self._cloud_frame = msg.header.frame_id
             if finite_z.size > 0:
                 self._height_min = float(np.min(finite_z))
                 self._height_max = float(np.max(finite_z))
 
-            self._elevation = self._build_elevation(xyz)
+            self._elevation = self._build_grid(points, 2)
+            self._sigma = self._build_grid(points, 3)
+            self._slope = self._build_slope(self._elevation)
             self._known_cells = int(np.isfinite(self._elevation).sum())
         except Exception as exc:
             if self._node is not None:
@@ -215,21 +269,21 @@ class TerrainMapWidget(QtWidgets.QWidget):
                 )
             return
 
-    def _render_image(self, elevation: np.ndarray) -> QImage | None:
-        known = np.isfinite(elevation)
+    def _render_image(self, values: np.ndarray, value_stops: list[float], unit: str) -> QImage | None:
+        known = np.isfinite(values)
         if not known.any():
             return None
 
-        z_min = float(np.min(elevation[known]))
-        z_max = float(np.max(elevation[known]))
+        v_min = float(np.min(values[known]))
+        v_max = float(np.max(values[known]))
 
-        # Colours are pinned to heights in metres, not stretched over min..max:
+        # Colours are pinned to fixed values, not stretched over min..max:
         # terrain_demo ground spans -0.32..10.6 m but ~95% of it is below 4 m, so a
         # min..max stretch would squash most of the ground into one colour.
-        # Anything above the last stop stays red. Tune HEIGHT_STOPS_M for other worlds.
-        stops = np.array([[0, 200, 0], [255, 255, 0], [255, 140, 0], [255, 0, 0]], dtype=np.float64)
-        heights = np.where(known, elevation, self.HEIGHT_STOPS_M[0])
-        rgb = np.stack([np.interp(heights, self.HEIGHT_STOPS_M, stops[:, c]) for c in range(3)],
+        # Anything above the last stop stays red. Tune the VIEWS stops for other worlds.
+        colours = np.array([[0, 200, 0], [255, 255, 0], [255, 140, 0], [255, 0, 0]], dtype=np.float64)
+        filled = np.where(known, values, value_stops[0])
+        rgb = np.stack([np.interp(filled, value_stops, colours[:, c]) for c in range(3)],
                        axis=-1).astype(np.uint8)
         rgb[~known] = 0
 
@@ -238,18 +292,21 @@ class TerrainMapWidget(QtWidgets.QWidget):
             rgb.data, self.grid_width, self.grid_height,
             3 * self.grid_width, QImage.Format_RGB888,
         )
-        self._z_range_text = f'low {z_min:.3f} m  /  high {z_max:.3f} m'
+        self._z_range_text = f'low {v_min:.2f} / high {v_max:.2f} {unit}'
         return image.copy()
         
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
         painter.fillRect(self.rect(), Qt.black)
 
-        elevation = self._elevation
-        image = self._render_image(elevation) if elevation is not None else None
+        attr, value_stops, unit = self.VIEWS[self._view]
+        values = getattr(self, attr)
+        image = self._render_image(values, value_stops, unit) if values is not None else None
         if image is None:
             painter.setPen(QPen(QColor(255, 255, 255)))
-            painter.drawText(self.rect(), Qt.AlignCenter, f'Waiting for {self._topic}...')
+            waiting = (f'Waiting for {self._topic}...' if self._elevation is None
+                       else f'No {self._view.lower()} data in {self._topic}')
+            painter.drawText(self.rect(), Qt.AlignCenter, waiting)
             painter.end()
             return
 
@@ -312,8 +369,8 @@ class TerrainMapWidget(QtWidgets.QWidget):
         painter.setPen(QPen(QColor(255, 255, 255)))
         painter.drawText(
             8, 16,
-            f'{self._z_range_text}  (green {self.HEIGHT_STOPS_M[0]:g} m → yellow {self.HEIGHT_STOPS_M[1]:g} '
-            f'→ orange {self.HEIGHT_STOPS_M[2]:g} → red {self.HEIGHT_STOPS_M[3]:g}+ m)  '
+            f'{self._view}: {self._z_range_text}  (green {value_stops[0]:g} → yellow {value_stops[1]:g} '
+            f'→ orange {value_stops[2]:g} → red {value_stops[3]:g}+ {unit})  '
             f'cells: {self._known_cells}  points: {self._cloud_points}  '
             f'frame: {self._cloud_frame or "unknown"}',
         )
