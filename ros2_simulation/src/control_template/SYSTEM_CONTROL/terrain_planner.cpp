@@ -65,6 +65,41 @@ TerrainPlanner::plan(
         return {};
     }
 
+    // Goal = any drivable cell in a stand-off ring around the casualty
+    // (GOAL_MIN_STANDOFF_M .. GOAL_SEARCH_RADIUS_M). Never the casualty's own
+    // cell: a person lying down can look "drivable" in the terrain map, and
+    // Nav2 then refuses the goal because the person is an obstacle (seen in
+    // Gazebo, 27 Oct). A* stops at the first ring cell it reaches, i.e. the
+    // closest stand-off point on the Husky's side.
+    const double inner_cells = GOAL_MIN_STANDOFF_M / terrain_map_.resolution();
+    const double outer_cells = GOAL_SEARCH_RADIUS_M / terrain_map_.resolution();
+    const int cx = gx;
+    const int cy = gy;
+    auto in_ring = [&](int x, int y) {
+        const double d = std::hypot(x - cx, y - cy);
+        return d >= inner_cells && d <= outer_cells;
+    };
+    {
+        bool any = false;
+        const int r = static_cast<int>(std::ceil(outer_cells));
+        for (int dy = -r; dy <= r && !any; ++dy)
+            for (int dx = -r; dx <= r && !any; ++dx)
+                any = in_ring(cx + dx, cy + dy) && terrain_map_.isTraversable(cx + dx, cy + dy);
+        if (!any) {
+            RCLCPP_WARN(rclcpp::get_logger("terrain_planner"),
+                        "No drivable cell %.1f-%.1f m from the casualty", GOAL_MIN_STANDOFF_M,
+                        GOAL_SEARCH_RADIUS_M);
+            return {};
+        }
+    }
+    // Admissible heuristic: every step costs at least 1 cell, and the ring
+    // starts outer_cells from the casualty.
+    auto ring_heuristic = [&](int x, int y) {
+        return std::max(0.0, std::hypot(x - cx, y - cy) - outer_cells);
+    };
+    const int start_clear_cells =
+        static_cast<int>(std::ceil(START_CLEAR_RADIUS_M / terrain_map_.resolution()));
+
     const int width =
         terrain_map_.getWidth();
 
@@ -100,7 +135,7 @@ TerrainPlanner::plan(
     open.push({
         sx,
         sy,
-        heuristic(sx, sy, gx, gy)
+        ring_heuristic(sx, sy)
     });
 
     const int directions[8][2] = {
@@ -123,10 +158,12 @@ TerrainPlanner::plan(
 
         open.pop();
 
-        if (current.x == gx &&
-            current.y == gy)
+        if (in_ring(current.x, current.y) &&
+            terrain_map_.isTraversable(current.x, current.y))
         {
             found = true;
+            gx = current.x;   // the stand-off cell reached: the route ends here
+            gy = current.y;
             break;
         }
 
@@ -139,8 +176,11 @@ TerrainPlanner::plan(
             const int ny =
                 current.y + direction[1];
 
-            if (!terrain_map_
-                     .isTraversable(nx, ny))
+            // Cells under/around the Husky are its own body in the drone's
+            // map (~0.5 m high), so they read as steep. Let it drive out.
+            const bool near_start =
+                std::hypot(nx - sx, ny - sy) <= start_clear_cells;
+            if (!near_start && !terrain_map_.isTraversable(nx, ny))
                 continue;
 
             const bool diagonal =
@@ -150,13 +190,12 @@ TerrainPlanner::plan(
             const double distance_cost =
                 diagonal ? std::sqrt(2.0) : 1.0;
 
-            const double slope_cost =
-                terrain_map_.getSlope(nx, ny) /
-                TerrainMap::MAX_SLOPE_DEG;
+            // Near the start the slope/sigma are the Husky itself; cap them.
+            const double slope_cost = std::isfinite(terrain_map_.getSlope(nx, ny))
+                ? std::min(terrain_map_.getSlope(nx, ny) / TerrainMap::MAX_SLOPE_DEG, 1.0) : 1.0;
 
-            const double sigma_cost =
-                terrain_map_.getSigma(nx, ny) /
-                TerrainMap::MAX_SIGMA_M;
+            const double sigma_cost = std::isfinite(terrain_map_.getSigma(nx, ny))
+                ? std::min(terrain_map_.getSigma(nx, ny) / TerrainMap::MAX_SIGMA_M, 1.0) : 1.0;
 
             const double movement_cost =
                 DISTANCE_WEIGHT *
@@ -187,8 +226,7 @@ TerrainPlanner::plan(
 
                 const double f =
                     tentative +
-                    heuristic(nx, ny,
-                              gx, gy);
+                    ring_heuristic(nx, ny);
 
                 open.push({
                     nx,

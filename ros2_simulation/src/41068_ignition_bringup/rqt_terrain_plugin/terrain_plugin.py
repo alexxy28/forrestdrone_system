@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import time
+
 import numpy as np
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PointStamped, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from python_qt_binding import QtWidgets
 from python_qt_binding.QtCore import QRect, QTimer, Qt
@@ -12,7 +14,40 @@ from rqt_gui_py.plugin import Plugin
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
+
+# Mission topics are latched (reliable + transient local, depth 1) on both ends.
+LATCHED = QoSProfile(
+    depth=1,
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+)
+
+
+def route_progress(route, husky, passed):
+    """Waypoint the Husky is heading to and the distance left along the route.
+
+    `passed` is the index of the next waypoint not yet reached; it only moves
+    forward. Returns (next_index, metres_left).
+    """
+    if not route or husky is None:
+        return passed, None
+    while passed < len(route) - 1 and np.hypot(route[passed][0] - husky[0],
+                                                route[passed][1] - husky[1]) < 1.0:
+        passed += 1
+    left = float(np.hypot(route[passed][0] - husky[0], route[passed][1] - husky[1]))
+    for a, b in zip(route[passed:], route[passed + 1:]):
+        left += float(np.hypot(b[0] - a[0], b[1] - a[1]))
+    return passed, left
+
+
+MISSION_TEXT = {
+    'SEARCHING': 'Drone searching for a heat signature',
+    'PLANNING': 'Casualty confirmed: planning the Husky route over the terrain map',
+    'HUSKY_EN_ROUTE': 'Husky driving the A* route to the casualty',
+    'DONE': 'Husky has reached the casualty',
+    'FAILED': 'Husky could not reach the casualty: operator decision needed',
+}
 
 
 class TerrainMapWidget(QtWidgets.QWidget):
@@ -26,6 +61,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self.setObjectName('TerrainMapWidget')
         self.setWindowTitle('Terrain Map')
         self.resize(800, 600)
+        self.setMinimumSize(360, 300)
         self.half_cells_x = int(np.ceil(self.SIZE_X / (2.0 * self.RESOLUTION)))
         self.half_cells_y = int(np.ceil(self.SIZE_Y / (2.0 * self.RESOLUTION)))
         self.grid_width = 2 * self.half_cells_x + 1
@@ -48,6 +84,15 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._drone_target_wp: tuple[float, float] | None = None
         self._husky_path: list[tuple[float, float]] = []
         self._drone_path: list[tuple[float, float]] = []
+        # Mission (TRACE) overlays
+        self._mission_route: list[tuple[float, float]] = []
+        self._casualty: tuple[float, float] | None = None
+        self._candidate: tuple[float, float] | None = None
+        self._hold: tuple[float, float] | None = None
+        self._route_passed = 0
+        self._mission_state = 'unknown'
+        self._husky_status = 'unknown'
+        self._mission_subs = []
 
         self._node: Node | None = None
         self._subscription = None
@@ -106,11 +151,31 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._drone_odom_sub = self._node.create_subscription(
             Odometry, '/parrot1/odometry', self._drone_odom_cb, 10)
 
-        # Nav2 Path Subscriptions
+        # Nav2 Path Subscriptions (Husky). The drone is flown by parrot_node,
+        # not Nav2, so show the search path mission control gave it instead.
         self._husky_plan_sub = self._node.create_subscription(
             Path, '/husky1/plan', self._husky_plan_cb, 10)
         self._drone_plan_sub = self._node.create_subscription(
-            Path, '/parrot1/plan', self._drone_plan_cb, 10)
+            Path, '/parrot1/mission/path', self._drone_plan_cb, LATCHED)
+
+        # Mission overlays: terrain-aware A* route, confirmed casualty, state.
+        for sub in self._mission_subs:
+            try:
+                self._node.destroy_subscription(sub)
+            except Exception:
+                pass
+        self._mission_subs = [
+            self._node.create_subscription(Path, '/mission/route', self._route_cb, LATCHED),
+            self._node.create_subscription(
+                PointStamped, '/mission/casualty', self._casualty_cb, LATCHED),
+            self._node.create_subscription(
+                PointStamped, '/mission/casualty_candidate', self._candidate_cb, LATCHED),
+            self._node.create_subscription(
+                PointStamped, '/mission/husky_hold', self._hold_cb, LATCHED),
+            self._node.create_subscription(String, '/mission/state', self._state_cb, LATCHED),
+            self._node.create_subscription(
+                String, '/mission/husky_status', self._husky_status_cb, LATCHED),
+        ]
 
         # Target Goal Pose Subscriptions
         self._husky_wp_sub = self._node.create_subscription(
@@ -130,6 +195,25 @@ class TerrainMapWidget(QtWidgets.QWidget):
     def _drone_plan_cb(self, msg: Path) -> None:
         self._drone_path = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
 
+    def _route_cb(self, msg: Path) -> None:
+        self._mission_route = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
+        self._route_passed = 0
+
+    def _candidate_cb(self, msg: PointStamped) -> None:
+        self._candidate = (msg.point.x, msg.point.y)
+
+    def _hold_cb(self, msg: PointStamped) -> None:
+        self._hold = (msg.point.x, msg.point.y)
+
+    def _casualty_cb(self, msg: PointStamped) -> None:
+        self._casualty = (msg.point.x, msg.point.y)
+
+    def _state_cb(self, msg: String) -> None:
+        self._mission_state = msg.data
+
+    def _husky_status_cb(self, msg: String) -> None:
+        self._husky_status = msg.data
+
     def _husky_wp_cb(self, msg: PoseStamped) -> None:
         self._husky_target_wp = (msg.pose.position.x, msg.pose.position.y)
 
@@ -140,7 +224,8 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._timer.stop()
         if self._node is not None:
             subs = [self._subscription, self._husky_odom_sub, self._drone_odom_sub, 
-                    self._husky_plan_sub, self._husky_wp_sub, self._drone_plan_sub, self._drone_wp_sub]
+                    self._husky_plan_sub, self._husky_wp_sub, self._drone_plan_sub, self._drone_wp_sub,
+                    *self._mission_subs]
             for sub in subs:
                 if sub is not None:
                     try:
@@ -262,12 +347,15 @@ class TerrainMapWidget(QtWidgets.QWidget):
             painter.end()
             return
 
-        scale = min(self.width() / self.grid_width, self.height() / self.grid_height)
+        # Text band at the top (3 lines) and the legend at the bottom.
+        top, bottom = 76, 34
+        avail_h = max(1, self.height() - top - bottom)
+        scale = min(self.width() / self.grid_width, avail_h / self.grid_height)
         draw_w = max(1, int(self.grid_width * scale))
         draw_h = max(1, int(self.grid_height * scale))
         target = QRect(
             (self.width() - draw_w) // 2,
-            (self.height() - draw_h) // 2,
+            top + (avail_h - draw_h) // 2,
             draw_w,
             draw_h,
         )
@@ -314,7 +402,32 @@ class TerrainMapWidget(QtWidgets.QWidget):
         # Draw trajectories then robots on top
         draw_trajectory(self._husky_pos, self._husky_path, self._husky_target_wp, 'cyan')
         draw_trajectory(self._drone_pos, self._drone_path, self._drone_target_wp, 'pink')
-        
+
+        # Terrain-aware A* route (solid yellow) with its waypoints.
+        if len(self._mission_route) >= 1:
+            pts = [world_to_pixel(x, y) for (x, y) in self._mission_route]
+            if self._husky_pos is not None:
+                pts.insert(0, world_to_pixel(*self._husky_pos))
+            painter.setPen(QPen(QColor('yellow'), 3))
+            for i in range(len(pts) - 1):
+                painter.drawLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
+            painter.setBrush(QColor('yellow'))
+            painter.setPen(QPen(Qt.black, 1))
+            for px, py in pts[1:]:
+                painter.drawEllipse(px - 3, py - 3, 6, 6)
+
+        # Detection awaiting review (orange ring), confirmed casualty (red cross).
+        if self._candidate is not None and self._casualty is None:
+            cx, cy = world_to_pixel(*self._candidate)
+            painter.setBrush(Qt.NoBrush)
+            painter.setPen(QPen(QColor('orange'), 3))
+            painter.drawEllipse(cx - 9, cy - 9, 18, 18)
+        if self._casualty is not None:
+            cx, cy = world_to_pixel(*self._casualty)
+            painter.setPen(QPen(QColor('red'), 3))
+            painter.drawLine(cx - 8, cy - 8, cx + 8, cy + 8)
+            painter.drawLine(cx - 8, cy + 8, cx + 8, cy - 8)
+
         draw_robot_marker(self._husky_pos, 'blue')
         draw_robot_marker(self._drone_pos, 'magenta')
 
@@ -325,6 +438,36 @@ class TerrainMapWidget(QtWidgets.QWidget):
             f'cells: {self._known_cells}  points: {self._cloud_points}  '
             f'frame: {self._cloud_frame or "unknown"}',
         )
+        painter.drawText(
+            8, 34,
+            f'Mission: {self._mission_state}   Husky: {self._husky_status}',
+        )
+        # Line 3: where the casualty is. Line 4: Husky progress (kept short so
+        # a narrow dock does not cut it off).
+        line3 = line4 = ''
+        if self._casualty is not None:
+            line3 = f'Casualty ({self._casualty[0]:.2f}, {self._casualty[1]:.2f})'
+        elif self._candidate is not None:
+            line3 = (f'Detection ({self._candidate[0]:.2f}, {self._candidate[1]:.2f}) '
+                     'awaiting review')
+        if self._casualty is not None and self._husky_pos is not None:
+            dist = np.hypot(self._husky_pos[0] - self._casualty[0],
+                            self._husky_pos[1] - self._casualty[1])
+            line4 = f'Husky {dist:.1f} m from casualty'
+            if self._husky_status == 'ARRIVED' and self._hold is not None:
+                moved = np.hypot(self._husky_pos[0] - self._hold[0], self._husky_pos[1] - self._hold[1])
+                line4 += f', stopped (moved {moved:.2f} m since)'
+            if self._mission_route and self._mission_state == 'HUSKY_EN_ROUTE':
+                self._route_passed, left = route_progress(
+                    self._mission_route, self._husky_pos, self._route_passed)
+                line4 += (f', wp {self._route_passed + 1}/{len(self._mission_route)}'
+                          f', {left:.1f} m left')
+        if line3:
+            painter.drawText(8, 52, line3)
+        if line4:
+            painter.drawText(8, 70, line4)
+        painter.drawText(8, self.height() - 26, 'yellow = A* route   orange = detection   red X = casualty')
+        painter.drawText(8, self.height() - 8, 'blue = Husky   magenta = drone')
         painter.end()
 
 
@@ -333,12 +476,31 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         super().__init__(parent)
         self.setObjectName('RobotMotionToggleWidget')
         self.setWindowTitle('Robot Motion Toggle')
-        self.resize(260, 220)
+        self.resize(360, 360)
+        # Keep the confirm buttons and mission status readable however the
+        # saved dashboard layout sizes the docks.
+        self.setMinimumSize(340, 330)
         self._node: Node | None = None
         self._publishers = {}
         self._subscriptions = {}
-        self._waypoint_topic = '/mission_control/husky1/waypoint_accept'
+        # Operator confirmation of a thermal detection (parrot_node waits on it).
+        self._confirm_topic = '/CasulityConfirmed'
+        self._discovered_topic = '/CasulityDiscovered'
         self._waypoint_publisher = None
+        self._discovered_sub = None
+        self._parrot_status_sub = None
+        self._casualty_pending = False
+        self._parrot_status = 'unknown'
+        self._mission_state = 'unknown'
+        self._husky_status = 'unknown'
+        self._candidate = None
+        self._casualty = None
+        self._husky_pos = None
+        self._route = []
+        self._route_passed = 0
+        self._odom_time = None
+        self._hold = None
+        self._mission_subs = []
         self._robot_states = {'husky1': True, 'parrot1': True}
         self._ui_timer = QTimer(self)
         self._ui_timer.timeout.connect(self._update_labels)
@@ -348,7 +510,24 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
     def set_node(self, node: Node) -> None:
         self._node = node
         self._ensure_waypoint_publisher()
-        self._publish_waypoint_accept(False)
+        self._discovered_sub = self._node.create_subscription(
+            Bool, self._discovered_topic, self._discovered_cb, LATCHED)
+        self._parrot_status_sub = self._node.create_subscription(
+            String, '/parrot1/mission/status', self._parrot_status_cb, LATCHED)
+        # Mission state, so the panel never shows a stale message.
+        self._mission_subs = [
+            self._node.create_subscription(String, '/mission/state', self._mission_state_cb, LATCHED),
+            self._node.create_subscription(
+                String, '/mission/husky_status', self._husky_status_cb, LATCHED),
+            self._node.create_subscription(
+                PointStamped, '/mission/casualty_candidate', self._candidate_cb, LATCHED),
+            self._node.create_subscription(
+                PointStamped, '/mission/casualty', self._casualty_cb, LATCHED),
+            self._node.create_subscription(Path, '/mission/route', self._route_cb, LATCHED),
+            self._node.create_subscription(Odometry, '/husky1/odometry', self._odom_cb, 10),
+            self._node.create_subscription(
+                PointStamped, '/mission/husky_hold', self._hold_cb, LATCHED),
+        ]
         for robot_name in self._robot_states:
             self._ensure_publisher(robot_name)
             self._ensure_subscription(robot_name)
@@ -371,7 +550,10 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
                 pass
             self._waypoint_publisher = None
 
-        for subscription in self._subscriptions.values():
+        for subscription in [*self._subscriptions.values(), *self._mission_subs,
+                             self._discovered_sub, self._parrot_status_sub]:
+            if subscription is None:
+                continue
             try:
                 self._node.destroy_subscription(subscription)
             except Exception:
@@ -379,7 +561,16 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._subscriptions.clear()
 
     def _build_ui(self) -> None:
-        layout = QtWidgets.QVBoxLayout(self)
+        # Scrollable, so a small rqt dock never cuts off the mission status.
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        inner = QtWidgets.QWidget()
+        scroll.setWidget(inner)
+        outer.addWidget(scroll)
+        layout = QtWidgets.QVBoxLayout(inner)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
 
@@ -387,9 +578,18 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
-        self._waypoint_button = QtWidgets.QPushButton('Set Husky Waypoint To Latest Heat Signature')
-        self._waypoint_button.clicked.connect(self._trigger_waypoint_accept)
-        layout.addWidget(self._waypoint_button)
+        self._casualty_label = QtWidgets.QLabel('No heat signature awaiting review')
+        self._casualty_label.setWordWrap(True)
+        layout.addWidget(self._casualty_label)
+
+        row = QtWidgets.QHBoxLayout()
+        self._waypoint_button = QtWidgets.QPushButton('Confirm casualty → send Husky')
+        self._waypoint_button.clicked.connect(lambda: self._answer_casualty(True))
+        row.addWidget(self._waypoint_button)
+        self._reject_button = QtWidgets.QPushButton('Reject (false alarm)')
+        self._reject_button.clicked.connect(lambda: self._answer_casualty(False))
+        row.addWidget(self._reject_button)
+        layout.addLayout(row)
 
         self._husky_button = QtWidgets.QPushButton('Stop Husky')
         self._husky_button.clicked.connect(lambda: self._toggle_robot('husky1'))
@@ -398,6 +598,11 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._parrot_button = QtWidgets.QPushButton('Stop Parrot')
         self._parrot_button.clicked.connect(lambda: self._toggle_robot('parrot1'))
         layout.addWidget(self._parrot_button)
+
+        self._mission_label = QtWidgets.QLabel('Mission: waiting for mission control...')
+        self._mission_label.setWordWrap(True)
+        self._mission_label.setStyleSheet('padding: 4px; border: 1px solid #888;')
+        layout.addWidget(self._mission_label)
 
         self._status = QtWidgets.QLabel('Idle')
         self._status.setWordWrap(True)
@@ -435,36 +640,131 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if self._node is None:
             return None
         if self._waypoint_publisher is None:
-            self._waypoint_publisher = self._node.create_publisher(Bool, self._waypoint_topic, 10)
+            # Latched to match parrot_node's subscription; a volatile
+            # publisher would be QoS-incompatible and never delivered.
+            self._waypoint_publisher = self._node.create_publisher(
+                Bool, self._confirm_topic, LATCHED)
         return self._waypoint_publisher
+
+    def _discovered_cb(self, msg: Bool) -> None:
+        if msg.data:
+            self._casualty_pending = True
+
+    def _parrot_status_cb(self, msg: String) -> None:
+        self._parrot_status = msg.data
+
+    def _mission_state_cb(self, msg: String) -> None:
+        if msg.data != self._mission_state and self._mission_state != 'unknown':
+            self._status.setText(f'Mission state changed to {msg.data}.')
+        self._mission_state = msg.data
+        # Once mission control has the casualty, there is nothing left to review
+        # (also covers a confirmation sent from the terminal, or rqt restarting
+        # and receiving the old latched "discovered" message).
+        if msg.data not in ('SEARCHING', 'unknown'):
+            self._casualty_pending = False
+
+    def _husky_status_cb(self, msg: String) -> None:
+        self._husky_status = msg.data
+
+    def _candidate_cb(self, msg: PointStamped) -> None:
+        self._candidate = (msg.point.x, msg.point.y)
+
+    def _casualty_cb(self, msg: PointStamped) -> None:
+        self._casualty = (msg.point.x, msg.point.y)
+
+    def _route_cb(self, msg: Path) -> None:
+        self._route = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
+        self._route_passed = 0
+
+    def _hold_cb(self, msg: PointStamped) -> None:
+        self._hold = (msg.point.x, msg.point.y)
+
+    def _odom_cb(self, msg: Odometry) -> None:
+        self._husky_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+        self._odom_time = time.monotonic()
 
     def _publish_stop_state(self, robot_name: str, stopped: bool) -> None:
         publisher = self._ensure_publisher(robot_name)
         if publisher is not None:
             publisher.publish(Bool(data=stopped))
 
-    def _publish_waypoint_accept(self, accepted: bool) -> None:
+    def _answer_casualty(self, confirmed: bool) -> None:
+        if self._node is None:
+            self._status.setText('ROS node is not connected yet.')
+            return
+        if not self._casualty_pending:
+            self._status.setText('No heat signature is waiting for review.')
+            return
         publisher = self._ensure_waypoint_publisher()
-        if publisher is not None:
-            publisher.publish(Bool(data=accepted))
+        publisher.publish(Bool(data=confirmed))
+        self._casualty_pending = False
+        self._status.setText(
+            'Casualty CONFIRMED: drone circles it, Husky route is being planned.'
+            if confirmed else 'Detection REJECTED: drone resumes its search.')
 
     def _estop_state_cb(self, robot_name: str, msg: Bool) -> None:
         self._robot_states[robot_name] = not bool(msg.data)
 
     def _update_labels(self) -> None:
+        if self._casualty_pending:
+            where = (f' at ({self._candidate[0]:.1f}, {self._candidate[1]:.1f})'
+                     if self._candidate else '')
+            self._casualty_label.setText(
+                f'⚠ HEAT SIGNATURE DETECTED{where} — drone is holding. Check the '
+                'thermal camera view, then confirm or reject.')
+            self._casualty_label.setStyleSheet('color: white; background: #b00020; padding: 4px;')
+        elif self._mission_state == 'DONE':
+            self._casualty_label.setText('✔ Husky has reached the casualty.')
+            self._casualty_label.setStyleSheet('color: white; background: #1b7f2a; padding: 4px;')
+        elif self._mission_state == 'FAILED':
+            self._casualty_label.setText('✖ Husky could not reach the casualty: operator decision needed.')
+            self._casualty_label.setStyleSheet('color: black; background: #f2b600; padding: 4px;')
+        elif self._casualty is not None:
+            self._casualty_label.setText('Casualty confirmed. No detection awaiting review.')
+            self._casualty_label.setStyleSheet('')
+        else:
+            self._casualty_label.setText('No detection awaiting review.')
+            self._casualty_label.setStyleSheet('')
+
+        lines = [f'<b>Mission:</b> {self._mission_state} — '
+                 f'{MISSION_TEXT.get(self._mission_state, "waiting for mission control")}']
+        drone = self._parrot_status
+        if self._mission_state in ('PLANNING', 'HUSKY_EN_ROUTE') and drone == 'SEARCHING':
+            drone += ' (patrolling for further casualties)'
+        elif self._mission_state == 'DONE':
+            drone += (' (overwatch near the casualty)' if drone == 'HOLDING'
+                      else ' (flying to overwatch near the casualty)')
+        lines.append(f'<b>Drone:</b> {drone}')
+        husky = self._husky_status
+        if self._casualty is not None and self._husky_pos is not None:
+            dist = np.hypot(self._husky_pos[0] - self._casualty[0],
+                            self._husky_pos[1] - self._casualty[1])
+            husky += f', {dist:.1f} m from the casualty'
+            if self._husky_status == 'ARRIVED' and self._hold is not None:
+                moved = np.hypot(self._husky_pos[0] - self._hold[0], self._husky_pos[1] - self._hold[1])
+                husky += f', stopped (moved {moved:.2f} m since)'
+            if self._route and self._mission_state == 'HUSKY_EN_ROUTE':
+                self._route_passed, left = route_progress(self._route, self._husky_pos,
+                                                          self._route_passed)
+                husky += (f', waypoint {self._route_passed + 1}/{len(self._route)}'
+                          f' ({left:.1f} m of route left)')
+        lines.append(f'<b>Husky:</b> {husky}')
+        if self._casualty is not None:
+            lines.append(f'<b>Casualty:</b> ({self._casualty[0]:.2f}, {self._casualty[1]:.2f})')
+        elif self._candidate is not None:
+            lines.append(f'<b>Detection:</b> ({self._candidate[0]:.2f}, {self._candidate[1]:.2f})')
+        # Make a silent link visible: stale Husky odometry or no mission control.
+        if self._odom_time is not None and time.monotonic() - self._odom_time > 5.0:
+            lines.append(f'<span style="color:#b00020"><b>⚠ No Husky odometry for '
+                         f'{time.monotonic() - self._odom_time:.0f} s</b></span>')
+        if self._mission_state == 'unknown':
+            lines.append('<span style="color:#b00020">⚠ No /mission/state yet: is '
+                         'system_control_node running?</span>')
+        self._mission_label.setText('<br>'.join(lines))
+        self._waypoint_button.setEnabled(self._casualty_pending)
+        self._reject_button.setEnabled(self._casualty_pending)
         self._husky_button.setText('Stop Husky' if self._robot_states.get('husky1', False) else 'Start Husky')
         self._parrot_button.setText('Stop Parrot' if self._robot_states.get('parrot1', False) else 'Start Parrot')
-
-    def _trigger_waypoint_accept(self) -> None:
-        if self._node is None:
-            self._status.setText('ROS node is not connected yet.')
-            return
-
-        self._publish_waypoint_accept(True)
-        QTimer.singleShot(120, lambda: self._publish_waypoint_accept(False))
-        self._status.setText(
-            f'Waypoint trigger sent on {self._waypoint_topic} (auto-reset to False).',
-        )
 
     def _toggle_robot(self, robot_name: str) -> None:
         clean_name = self._clean_robot_name(robot_name)

@@ -346,7 +346,11 @@ void Parrot::publish(double vx, double vy, double vz, double wz)
 
 void Parrot::stop()
 {
-    publish(0.0, 0.0, 0.0, 0.0);
+    // Hover: no horizontal motion, but keep holding the height above ground.
+    // A plain zero command let the drone sink (~0.2 m/s measured in Gazebo,
+    // 28 Oct) while it waited for the operator, held for the stop button or
+    // hovered at the end of a mission, until it was inside the terrain.
+    publish(0.0, 0.0, climbed_ ? altitudeCommand() : 0.0, 0.0);
 }
 
 bool Parrot::aimAtRelativeBearing(double bearing)
@@ -403,6 +407,16 @@ double Parrot::altitudeCommand() const
 void Parrot::climb()
 {
     catchUpAfterHold(node_->now().seconds());
+    // Before parrot_node starts, the simulated drone slowly sinks (~0.1 m/s,
+    // measured in Gazebo Fortress) and can end up below the terrain mesh, where
+    // the down lidar sees nothing. Holding height there would leave it stuck
+    // underground forever, so during the initial climb "no ground" means "rise".
+    if (!have_agl_ && !climbed_) {
+        RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
+                             "No ground in down lidar range during take-off: climbing until it is seen");
+        publish(0.0, 0.0, 0.5, 0.0);
+        return;
+    }
     publish(0.0, 0.0, altitudeCommand(), 0.0);
     if (have_agl_ && std::fabs(target_alt_ - agl_) < 0.5) {
         climbed_ = true;

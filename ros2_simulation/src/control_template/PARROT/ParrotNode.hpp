@@ -47,6 +47,7 @@ rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr pathSub_;
 rclcpp::Publisher<std_msgs::msg::String>::SharedPtr statusPub_;
 rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr casualtyPub_;
 rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr casualtyDiscoveredPub_;
+rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr casualtyCandidatePub_;  // where the detection is, for the operator
 
 rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr stopSub_;
 rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr casualtyConfirmedSub_;

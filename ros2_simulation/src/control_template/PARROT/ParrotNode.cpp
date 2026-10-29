@@ -66,9 +66,10 @@ pathSub_ = create_subscription<nav_msgs::msg::Path>(
     std::bind(&ParrotNode::onMissionPath, this, std::placeholders::_1));
 statusPub_ = create_publisher<std_msgs::msg::String>(statusTopic, latched);
 casualtyPub_ = create_publisher<geometry_msgs::msg::PointStamped>(topics::CASUALTY, latched);
-casualtyDiscoveredPub_ = create_publisher<std_msgs::msg::Bool>("/CasulityDiscovered", latched);
+casualtyDiscoveredPub_ = create_publisher<std_msgs::msg::Bool>(topics::CASUALTY_DISCOVERED, latched);
+casualtyCandidatePub_ = create_publisher<geometry_msgs::msg::PointStamped>(topics::CASUALTY_CANDIDATE, latched);
 casualtyConfirmedSub_ = create_subscription<std_msgs::msg::Bool>(
-    "/CasulityConfirmed", latched,
+    topics::CASUALTY_CONFIRMED, latched,
     std::bind(&ParrotNode::onCasualtyConfirmed, this, std::placeholders::_1));
 
 // Stop button: true = freeze in place, false = carry on.
@@ -274,6 +275,7 @@ pendingCasualtyIndex_ = casualty->index;
 awaitingCasualtyConfirmation_ = true;
 casualtyConfirmationReceived_ = false;
 casualtyConfirmed_ = false;
+casualtyCandidatePub_->publish(casualty->position);   // shown on the dashboard before review
 std_msgs::msg::Bool discovered;
 discovered.data = true;
 casualtyDiscoveredPub_->publish(discovered);

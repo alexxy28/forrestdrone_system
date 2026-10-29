@@ -35,11 +35,16 @@ _TERRAIN_DEMO_HUMAN_POSES = [
 ]
 
 
-def _randomize_terrain_human_pose(world_path):
+def _randomize_terrain_human_pose(world_path, choice='random'):
     with open(world_path, 'r', encoding='utf-8') as handle:
         world_text = handle.read()
 
-    selected_pose = random.choice(_TERRAIN_DEMO_HUMAN_POSES)
+    # human_pose:=random (default) or 0-5 to repeat a scenario. This only sets
+    # where the simulated person spawns; the robots are never told.
+    if str(choice).strip().isdigit() and int(choice) < len(_TERRAIN_DEMO_HUMAN_POSES):
+        selected_pose = _TERRAIN_DEMO_HUMAN_POSES[int(choice)]
+    else:
+        selected_pose = random.choice(_TERRAIN_DEMO_HUMAN_POSES)
     include_pattern = (
         r'(<include>\s*<uri>model://human</uri>\s*<name>human_heat1</name>\s*<pose>)'
         r'([^<]+)'
@@ -76,7 +81,8 @@ def _add_gazebo_with_world_randomization(context, *_args, **_kwargs):
     selected_pose = None
     option_count = 0
     if world_name == 'terrain_demo':
-        world_path, selected_pose, option_count = _randomize_terrain_human_pose(world_path)
+        world_path, selected_pose, option_count = _randomize_terrain_human_pose(
+            world_path, LaunchConfiguration('human_pose').perform(context))
 
     ign_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -87,7 +93,11 @@ def _add_gazebo_with_world_randomization(context, *_args, **_kwargs):
             )
         ),
         launch_arguments={
-            'ign_args': f'{world_path} -r',
+            # gui:=false runs the Gazebo server only (sensors still render):
+            # much lighter on laptops/WSL; RViz and rqt still show everything.
+            'ign_args': f'{world_path} -r' + (
+                '' if LaunchConfiguration('gui').perform(context).lower() in ('true', '1', 'yes', 'on')
+                else ' -s'),
         }.items(),
     )
 
@@ -148,17 +158,15 @@ def add_robot(
       - TF frame ids use <frame_prefix>, e.g. husky1_base_link
     """
 
-    robot_description_content = ParameterValue(
-        Command([
-            'xacro ',
-            PathJoinSubstitution([pkg_path] + xacro_parts),
-            ' ',
-            'prefix:=', frame_prefix,
-            ' ',
-            'gz_model_name:=', gz_model_name,
-        ]),
-        value_type=str,
-    )
+    robot_description_xml = Command([
+        'xacro ',
+        PathJoinSubstitution([pkg_path] + xacro_parts),
+        ' ',
+        'prefix:=', frame_prefix,
+        ' ',
+        'gz_model_name:=', gz_model_name,
+    ])
+    robot_description_content = ParameterValue(robot_description_xml, value_type=str)
 
     robot_enabled = _if_true(enabled_arg)
 
@@ -197,21 +205,33 @@ def add_robot(
         condition=robot_enabled,
     ))
 
-    robot_spawner = Node(
-        package='ros_ign_gazebo',
-        executable='create',
-        name='spawn_' + namespace,
-        output='screen',
-        parameters=[{'use_sim_time': use_sim_time}],
-        arguments=[
-            '-topic', '/' + namespace + '/robot_description',
-            '-name', gz_model_name,
-            '-x', x,
-            '-y', y,
-            '-z', z,
-            '-Y', yaw,
-        ],
-    )
+    # The spawner reads the model from a file written here, not from the
+    # robot_description topic: in Gazebo tests (28 Oct) the spawner once
+    # waited forever for that topic although robot_state_publisher had
+    # published it (a DDS discovery miss), and the Husky never appeared.
+    # (-string does not survive the deprecated ros_ign_gazebo shell wrapper.)
+    def _spawner(context):
+        xml = robot_description_xml.perform(context)
+        fd, path = tempfile.mkstemp(prefix=gz_model_name + '_', suffix='.urdf')
+        with os.fdopen(fd, 'w') as fh:
+            fh.write(xml)
+        return [Node(
+            package='ros_ign_gazebo',
+            executable='create',
+            name='spawn_' + namespace,
+            output='screen',
+            parameters=[{'use_sim_time': use_sim_time}],
+            arguments=[
+                '-file', path,
+                '-name', gz_model_name,
+                '-x', x,
+                '-y', y,
+                '-z', z,
+                '-Y', yaw,
+            ],
+        )]
+
+    robot_spawner = OpaqueFunction(function=_spawner)
 
     # Start Gazebo first, then insert robot entities in a predictable order.
     ld.add_action(TimerAction(
@@ -242,6 +262,8 @@ def add_navigation_instance(
     robot_arg,
     robot_namespace,
     start_delay,
+    slam_value=None,
+    nav2_value=None,
 ):
     nav_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -255,8 +277,8 @@ def add_navigation_instance(
             'use_sim_time': use_sim_time,
             'namespace': robot_namespace,
             'config_filename_suffix': '_' + robot_namespace,
-            'slam': LaunchConfiguration('slam'),
-            'nav2': LaunchConfiguration('nav2'),
+            'slam': slam_value if slam_value is not None else LaunchConfiguration('slam'),
+            'nav2': nav2_value if nav2_value is not None else LaunchConfiguration('nav2'),
         }.items(),
     )
 
@@ -340,6 +362,15 @@ def generate_launch_description():
     )
     ld.add_action(nav2_launch_arg)
 
+    # parrot_node flies the drone directly on /parrot1/cmd_vel. A Parrot Nav2
+    # would publish on the same topic, so it is off unless asked for. SLAM still
+    # runs for the Parrot whenever slam or nav2 is on, so parrot1_map exists.
+    ld.add_action(DeclareLaunchArgument(
+        'parrot_nav2',
+        default_value='False',
+        description='Also start Nav2 for the Parrot (conflicts with parrot_node)',
+    ))
+
     husky_launch_arg = DeclareLaunchArgument(
         'husky',
         default_value='True',
@@ -353,6 +384,18 @@ def generate_launch_description():
         description='Launch the Parrot drone instance in namespace /parrot1',
     )
     ld.add_action(parrot_launch_arg)
+
+    ld.add_action(DeclareLaunchArgument(
+        'human_pose',
+        default_value='random',
+        description='terrain_demo casualty spawn: random, or 0-5 to repeat a scenario',
+    ))
+
+    ld.add_action(DeclareLaunchArgument(
+        'gui',
+        default_value='True',
+        description='Open the Gazebo window (false = server only, less CPU)',
+    ))
 
     world_launch_arg = DeclareLaunchArgument(
         'world',
@@ -445,6 +488,9 @@ def generate_launch_description():
         robot_arg='parrot',
         robot_namespace='parrot1',
         start_delay=10.0,
+        slam_value=PythonExpression(
+            _is_true_expression('slam') + [' or '] + _is_true_expression('nav2')),
+        nav2_value=LaunchConfiguration('parrot_nav2'),
     )
 
     add_rviz_instance(

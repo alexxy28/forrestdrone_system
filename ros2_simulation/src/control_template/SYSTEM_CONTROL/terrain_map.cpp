@@ -72,6 +72,12 @@ void TerrainMap::updateFromPointCloud(
 {
     std::fill(cells_.begin(), cells_.end(), Cell{});
 
+    // Iterators on an empty cloud dereference data.front() of an empty vector.
+    if (cloud.width * cloud.height == 0 || cloud.data.empty()) {
+        rebuild();
+        return;
+    }
+
     sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud, "x");
     sensor_msgs::PointCloud2ConstIterator<float> iter_y(cloud, "y");
     sensor_msgs::PointCloud2ConstIterator<float> iter_z(cloud, "z");
@@ -117,9 +123,15 @@ sensor_msgs::msg::PointCloud2 TerrainMap::toCloud(
         "sigma", 1, PointField::FLOAT32,
         "count", 1, PointField::FLOAT32);
 
-    modifier.resize(std::count_if(
+    const auto observed = std::count_if(
         cells_.begin(), cells_.end(),
-        [](const Cell &c) { return c.count > 0; }));
+        [](const Cell &c) { return c.count > 0; });
+    modifier.resize(observed);
+
+    // Nothing observed yet (drone still climbing): an empty cloud, and no
+    // iterators, which would dereference an empty buffer.
+    if (observed == 0)
+        return cloud;
 
     sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
     sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");

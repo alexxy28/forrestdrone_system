@@ -37,7 +37,13 @@
       <origin xyz="${x_pos} ${y_pos} 0.03282" rpy="0 0 0"/>
       <limit lower="-1e+16" upper="1e+16" effort="1e+16" velocity="1e+16"/>
       <axis xyz="0 1 0"/>
-      <dynamics damping="0.004"/>
+      <!-- friction: holding torque (N.m), like motors holding the wheels. Without
+           it the Husky rolled downhill after stopping (VelocityControl only sets
+           the body velocity each step). Measured in Gazebo, 28 Oct
+           (tools/husky_park_test.py): 10 N.m still crept on 22.6 deg, 20 N.m held
+           still on 24.9 deg (the steepest the planner allows is 25), keeping
+           88 % of the commanded speed. -->
+      <dynamics damping="0.004" friction="20.0"/>
     </joint>
 
   </xacro:macro>

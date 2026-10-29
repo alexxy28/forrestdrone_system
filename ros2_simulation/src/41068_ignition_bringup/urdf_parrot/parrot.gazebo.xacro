@@ -211,12 +211,18 @@
         <depth_camera>
           <clip>
             <near>0.4</near>
-            <far>10</far>
+            <!-- 40 m to match the thermal camera. At 10 m (old value) the drone,
+                 flying 7+ m up with the camera tilted 45 deg, had no depth for most
+                 of the ground it could see, so distant heat sources could not be
+                 sized or located. -->
+            <far>40</far>
           </clip>
         </depth_camera>
       </camera>
       <always_on>1</always_on>
-      <update_rate>3</update_rate> <!--10-->
+      <!-- 5 Hz (was 3): every depth frame then lands exactly on a 10 Hz thermal
+           frame, so the casualty detector gets more paired views per pass. -->
+      <update_rate>5</update_rate>
       <visualize>$(arg camera_visual)</visualize>
       <topic>/model/${gz_model_name}/camera</topic>
       <gz_frame_id>${prefix}camera_link</gz_frame_id>

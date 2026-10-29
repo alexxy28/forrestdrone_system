@@ -27,6 +27,12 @@ private:
     const double DISTANCE_WEIGHT = 1.0;
     const double SLOPE_WEIGHT = 4.0;
     const double SIGMA_WEIGHT = 4.0;
+    // Husky footprint is ~1.0 x 0.7 m; clear its own cells plus a margin.
+    const double START_CLEAR_RADIUS_M = 1.0;
+    // Stop in a ring this far from the casualty: close enough to deliver
+    // supplies, never on top of the person.
+    const double GOAL_MIN_STANDOFF_M = 1.6;   // body reaches ~0.9 m from its centre
+    const double GOAL_SEARCH_RADIUS_M = 2.5;
 };
 
 #endif

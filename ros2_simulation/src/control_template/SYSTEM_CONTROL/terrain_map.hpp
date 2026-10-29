@@ -52,6 +52,7 @@ public:
     double getSigma(int gx, int gy) const;
 
     int getWidth() const;
+    double resolution() const { return resolution_; }
     int getHeight() const;
 
     static constexpr double MAX_SLOPE_DEG = 25.0;

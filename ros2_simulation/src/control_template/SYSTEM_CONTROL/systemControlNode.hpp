@@ -47,6 +47,12 @@ class SystemControlNode : public rclcpp::Node{
     void huskyStatusCallback(const std_msgs::msg::String::SharedPtr msg);
 
     void tryPlan();
+    void watchdog();
+    void checkArrival();
+    void sendOverwatch();
+    std::vector<std::pair<double, double>> zigzagAlongY(double x0, double y0, double width,
+                                                        double height, double spacing) const;
+    void surveyForRoute();
     void setState(State state);
 
     // ---- drone tasking ----
@@ -98,11 +104,30 @@ class SystemControlNode : public rclcpp::Node{
     double casualtyX_{0.0}, casualtyY_{0.0};
 
     // ---- drone tasking ----
-    double areaX0_{-17.0}, areaY0_{-11.0}, areaWidth_{28.0}, areaHeight_{22.0};
+    double areaX0_{-17.0}, areaY0_{-12.0}, areaWidth_{30.0}, areaHeight_{28.0};
     double laneSpacing_{4.0};
     double clickBoxSize_{8.0};
     std::string missionFrame_{"world"};
     std::string droneStatus_{"UNKNOWN"};
+    bool autoStart_{false};
+    bool searchStarted_{false};
+    int searchPasses_{0};
+    static constexpr int MAX_SEARCH_PASSES = 3;
+    int routeSurveys_{0};
+    static constexpr int MAX_ROUTE_SURVEYS = 3;
+    int routeReplans_{0};
+    // Communication watchdog (warnings only).
+    rclcpp::Time routeSentAt_{0, 0, RCL_ROS_TIME};
+    rclcpp::Time lastHuskyOdom_{0, 0, RCL_ROS_TIME};
+    bool huskyAcked_{false};
+    rclcpp::Time surveysExhaustedAt_{0, 0, RCL_ROS_TIME};
+    static constexpr int MAX_ROUTE_REPLANS = 2;
+    double routeStartDist_{0.0};   // Husky -> casualty when the current route was sent (m)
+    double arrivalMax_{3.0};       // DONE only within this of the casualty (m)
+    std::string lastHuskyStatus_;
+    bool overwatchSent_{false};
+    static constexpr double OVERWATCH_OFFSET_M = 5.0;
+    static constexpr double MIN_REPLAN_PROGRESS_M = 1.0;
 };
 
 #endif

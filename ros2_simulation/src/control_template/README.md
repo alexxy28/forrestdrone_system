@@ -341,7 +341,6 @@ ros2 topic pub --once --qos-durability transient_local /mission/husky_status \
   std_msgs/msg/String "{data: ARRIVED}"
 ```
 
-The full ordered test list is in [ToDo.md](ToDo.md).
 
 ## Known issues
 
@@ -382,7 +381,6 @@ The full ordered test list is in [ToDo.md](ToDo.md).
 
 ## Further reading
 
-- [ToDo.md](ToDo.md): open design decisions, remaining work and the staged test plan.
 - [41068_ignition_bringup README](../41068_ignition_bringup/README.md): installation,
   launch arguments, worlds and the demo scripts.
 - [Repository README](../../../README.md): the project concept.
