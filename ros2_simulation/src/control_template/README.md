@@ -1,397 +1,396 @@
 # control_template
 
-Mission control software for the forest search-and-rescue system. A Parrot drone flies a
-search pattern over an area, a casualty position is reported, a route that avoids steep
-ground is planned from the drone's terrain data, and a Husky ground robot drives that route
-using Nav2.
+The mission software for TRACE, written in C++17 for ROS 2 Humble. It contains four nodes:
 
-This package holds the three ROS 2 nodes that do that. The simulator, robot models, Nav2
-configuration and terrain builder live in the neighbouring
-[41068_ignition_bringup](../41068_ignition_bringup/README.md) package. The project idea is
-described in the [repository README](../../../README.md).
+| Node | Source | Job |
+|---|---|---|
+| `parrot_node` | [PARROT/](PARROT/) | Flies the drone, detects casualties with the thermal camera, and asks the operator to review each detection |
+| `terrain_map_node` | [SYSTEM_CONTROL/terrain_map_node.cpp](SYSTEM_CONTROL/terrain_map_node.cpp) | Builds the terrain map from the drone's down LiDAR |
+| `system_control_node` | [SYSTEM_CONTROL/systemControlNode.cpp](SYSTEM_CONTROL/systemControlNode.cpp) | Runs the mission state machine, tasks the drone, and plans the Husky's route |
+| `husky_node` | [HUSKY/](HUSKY/) | Drives the route through Nav2, makes the final approach, and holds position |
 
-Target platform: ROS 2 Humble, Ignition Gazebo Fortress, C++17.
+The simulator, robot models, Nav2 configuration, launch files and operator dashboard are in
+[41068_ignition_bringup](../41068_ignition_bringup/README.md). The
+[repository README](../../../README.md) covers installation, the one-command demo, and an
+overview of the system.
 
-## Current status
+## Contents
 
-- Parrot search flight: working. Climbs to altitude, flies a 14-waypoint zigzag over ±18 m (6 m lanes), then holds.
-- Husky route driving: working. Drives a route one waypoint at a time through Nav2 and
-  reports its status.
-- Mission state machine: working. Moves from searching to planning when a casualty arrives,
-  and tracks the Husky.
-- Terrain map and planner: partly working. The code runs, but found no route when tested.
-  See [Known issues](#known-issues).
-- Casualty detection: integrated into `parrot_node`. Thermal blobs are matched with depth
-  and raw odometry, confirmed over multiple frames, then published to mission control.
-- Parrot reacting to the mission: not built. The Parrot does not listen to the mission
-  state and never stops its search early.
+- [Build and run](#build-and-run)
+- [Mission flow](#mission-flow)
+- [parrot_node](#parrot_node)
+- [terrain_map_node](#terrain_map_node)
+- [system_control_node](#system_control_node)
+- [husky_node](#husky_node)
+- [Topics and services](#topics-and-services)
+- [Frames](#frames)
+- [Testing](#testing)
+- [Known issues](#known-issues)
+- [Conventions for contributors](#conventions-for-contributors)
 
-The whole mission has not yet run end to end without a hand-published message.
+## Build and run
 
-## Prerequisites and build
-
-Install ROS 2 Humble, Ignition Fortress, Nav2, SLAM Toolbox and robot_localization by
-following the installation section of the
-[bringup README](../41068_ignition_bringup/README.md#installation).
-
-Build both packages from the workspace root:
+Build from the workspace root. Build the whole workspace at least once, because the launch
+files and the dashboard are in the bringup package.
 
 ```bash
 cd ros2_simulation
 source /opt/ros/humble/setup.bash
-colcon build --symlink-install
+colcon build --symlink-install            # or: --packages-select control_template
 source install/setup.bash
 ```
 
-Build the whole workspace at least once. Building only `control_template` leaves the
-bringup package's install folder out of date, and the terrain builder will be missing.
-
-On a shared network, keep ROS traffic on your own machine:
+The simplest way to run the full mission is `./run_simulation.sh --trace` from the
+repository root. To run the parts separately, use two terminals:
 
 ```bash
-export ROS_LOCALHOST_ONLY=1
-```
-
-## Running
-
-Use three terminals. In each one, first run:
-
-```bash
-cd ros2_simulation
-source /opt/ros/humble/setup.bash && source install/setup.bash
-```
-
-1. Simulator, both robots, Nav2 and SLAM
-
-```bash
+# 1. Simulator, both robots, SLAM, Husky Nav2
 ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
-  world:=large_demo husky:=True parrot:=True nav2:=True
+  world:=terrain_demo husky:=true parrot:=true slam:=true nav2:=true
+
+# 2. The four mission nodes
+ros2 launch 41068_ignition_bringup control.launch.py auto_start:=true
 ```
 
-2. The control nodes (including the terrain map builder)
+`control.launch.py` arguments:
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `nodes` | `all` | Comma-separated subset of `system_control`, `husky`, `parrot`, `terrain_map` |
+| `auto_start` | `false` | Start the area search as soon as the drone has climbed. If false, start it with `ros2 service call /mission/start std_srvs/srv/Trigger` |
+| `height_map` | empty | Saved terrain map to preload: a folder name in `pre_scanned_height_maps/` (e.g. `terrain_demo`) or a bag path |
+| `use_sim_time` | `true` | |
+
+You can also run a single node on its own, e.g. `ros2 run control_template husky_node`.
+The mission topics are latched, so the nodes can start in any order.
+
+## Mission flow
+
+```
+ system_control_node                 parrot_node                       husky_node
+ ───────────────────                 ───────────                       ──────────
+ SEARCHING ── search pass ─────────► fly lanes, run detector
+                                     candidate found: hover (PAUSED) ◄── operator
+                                     confirm: publish /mission/casualty
+ PLANNING ◄─ /mission/casualty ───── fly to 5 m review point, circle,
+   A* on terrain map                 resume search
+   no route? ── survey corridor ───► fly the corridor
+ HUSKY_EN_ROUTE ── /mission/route ────────────────────────────────────► Nav2 goal per waypoint
+                                                                       final approach, settle
+ DONE ◄──────────────────────────────────────── ARRIVED ────────────── hold, watch for drift
+   overwatch ───────────────────────► hover 5 m from casualty
+```
+
+1. **Search.** `system_control_node` sends the drone a lawnmower path over the search area,
+   by default x and y from -18 to 18 m with lanes 6 m apart. If a pass ends with nobody
+   found, it sends another, up to 3 passes. Pass 2 runs north-south. Pass 3 runs
+   east-west again, offset by half a lane.
+2. **Detect and review.** When the thermal detector reports a person, `parrot_node` hovers
+   and publishes `true` on `/CasulityDiscovered`. It then waits, with no time limit, for the
+   operator's answer on `/CasulityConfirmed`.
+   - **Reject:** the drone carries on with its search.
+   - **Confirm:** it publishes the position on `/mission/casualty`, flies to a point 5 m from
+     the person, circles once at that radius, and then carries on with the rest of its
+     search.
+3. **Plan.** Every second, `system_control_node` runs A\* over the terrain map, from the
+   Husky to a stand-off ring around the casualty. If there's no route yet, and the drone is
+   free, it sends the drone to map the box around the Husky and the casualty. Each attempt
+   widens the box (up to 3 surveys). If there's still no route 20 s after the last survey,
+   the mission is `FAILED`.
+4. **Drive.** `husky_node` drives the route with one Nav2 goal per waypoint. At the end it
+   checks its true distance to the casualty and, if needed, sends a short approach goal.
+   It reports `ARRIVED` only once it has been stationary for 2 s.
+5. **Done.** Mission control checks the arrival against its own odometry (within 3 m) and
+   moves to `DONE`. It then sends the drone to hover 5 m from the casualty on the Husky's
+   side, so the camera sees both. If the Husky later drifts away, the mission leaves `DONE`.
+
+## parrot_node
+
+Flies the drone along whatever path `system_control_node` sends it. It has no search
+pattern of its own.
+
+Source:
+- [ParrotNode.cpp](PARROT/ParrotNode.cpp): states, casualty review, mission topics
+- [parrot.cpp](PARROT/parrot.cpp): flight control and obstacle steering
+- [ThermalCamera.cpp](PARROT/ThermalCamera.cpp): detection
+- [main.cpp](main.cpp): the executable's `main` and a terminal interface
+
+**Flight.** The drone holds `target_altitude` (7 m) *above the ground*, measured to the
+highest return from the down LiDAR. It doesn't use odometry z, which isn't reliable on this
+terrain. It turns toward the next waypoint, and only moves forward when it is roughly facing
+that waypoint. Trees and slopes seen by the horizontal 360° LiDAR push it sideways:
+
+- A cluster narrower than `max_tree_width` (2 m) is a tree and pushes within `avoid_radius`
+  (4 m).
+- A wider cluster is a slope and pushes within `slope_radius` (3 m).
+
+If the drone makes no progress toward a waypoint for `stuck_timeout` (15 s), it skips that
+waypoint.
+
+**States**, published on `/parrot1/mission/status`:
+
+| State | Meaning |
+|---|---|
+| `WAITING_FOR_ODOM` | No odometry yet |
+| `CLIMBING` | Climbing to the target height. Happens once; after that the height is held while flying |
+| `IDLE` | At altitude, no path received. `auto_start` starts the search on this state |
+| `SEARCHING` | Flying a path (search, review, survey or overwatch) |
+| `HOLDING` | Path finished, hovering. Mission control uses this to send the next task |
+| `PAUSED` | Stop button held, or waiting for the operator to review a detection |
+
+An empty path on `/parrot1/mission/path` means "stop and hover".
+
+### Thermal detection
+
+The thermal camera publishes mono16 images in units of 0.01 K. Each depth frame (5 Hz) is
+paired with a thermal frame taken within 0.04 s of it, and with raw odometry taken within
+0.03 s.
+
+1. **Hot blobs.** Pixels at or above `heat_threshold_c` (30 °C), or above the image's 98th
+   percentile if that is higher, are cleaned up with a 3×3 open and close, then split into
+   connected blobs.
+2. **Views.** A blob counts as a *view* of something only if all of these hold:
+   - at least 25% of its pixels have valid depth;
+   - it doesn't touch the image edge;
+   - it has at least `min_classify_pixels` (60) pixels;
+   - the camera sees it from at least `min_view_elevation_deg` (20°) above the horizon.
+
+   Its pixels are then projected into world coordinates with the depth image, the camera
+   mount (pitch 45°) and the drone's pose, and its size and elongation are measured.
+3. **Tracks.** Views within `detection_confirmation_distance_m` (2 m) of each other join
+   the same track.
+4. **Decision.** Once a track has `detection_confirmation_frames` (6) views, it becomes a
+   casualty if at least `min_human_view_fraction` (60%) of its views look like a person:
+   median size `min_human_size_m` to `max_human_size_m` (0.75–4 m) and elongation at least
+   `min_human_elongation` (1.6×). The size and elongation check rejects animals: in
+   calibration a person measured 0.97 m at 2.5× elongation, and the demo animal 0.56 m at
+   1.2×.
+
+Set `show_camera_windows:=true` for OpenCV debug windows showing the thermal and depth
+images.
+
+### Terminal commands
+
+`parrot_node` also reads commands from stdin. This only works with `ros2 run`; under
+`ros2 launch` stdin isn't connected.
+
+```
+list               all detections, with position and status
+confirm <index>    same as the dashboard's Confirm button
+deny <index>       same as Reject
+quit
+```
+
+## terrain_map_node
+
+Builds a 2.5D grid from the drone's down LiDAR (`/parrot1/scan/points`). The grid is
+40 × 40 m with 0.5 m cells, centred on the origin. The drone's raw odometry places each
+return in world coordinates. The node discards returns that hit the drone itself (closer
+than 0.6 m) and outliers, and skips scans whose odometry is more than 0.25 s out of step
+with the scan.
+
+Each cell keeps a running mean (height) and variance (roughness) of its returns. After 50
+returns, older data starts to fade out, so moved objects clear from the map. The map is
+then rebuilt:
+
+- **Known cell:** at least 3 returns.
+- **Small holes:** filled from the average of their known neighbours, in 2 passes. A hole
+  needs at least 3 of its 8 neighbours known.
+- **Slope:** the steepest change to any of the 4 direct neighbours.
+- **Drivable:** the slope is at most 25° and the spread (sigma) is at most 0.5 m. A larger
+  spread means canopy over ground. Unknown cells are never drivable.
+
+The node publishes `/parrot1/terrain_points`, one point per known cell with fields `x, y, z,
+sigma, count`, and prints statistics every 5 s.
+
+**Saved maps.** With `height_map:=...`, `control.launch.py` plays a recorded bag in a loop
+onto `/parrot1/terrain_seed`. The node loads only the first cloud and then stops listening,
+so live scans aren't overwritten. To save a map after a full scan:
 
 ```bash
-ros2 launch 41068_ignition_bringup control.launch.py
+ros2 bag record -o ../41068_ignition_bringup/pre_scanned_height_maps/<name> /parrot1/terrain_points
 ```
 
-To start only some of them, pass `nodes` (any of `system_control`, `husky`, `parrot`,
-`terrain_map`):
+## system_control_node
+
+Owns the mission. Source: [systemControlNode.cpp](SYSTEM_CONTROL/systemControlNode.cpp),
+[terrain_map.cpp](SYSTEM_CONTROL/terrain_map.cpp) (it keeps its own copy of the map), and
+[terrain_planner.cpp](SYSTEM_CONTROL/terrain_planner.cpp).
+
+**States**, published latched on `/mission/state`:
+
+| State | Entered when | Leaves when |
+|---|---|---|
+| `SEARCHING` | Node starts | The first confirmed casualty arrives |
+| `PLANNING` | Casualty confirmed, or the Husky failed and a replan is allowed | A route is found, or no route after 3 surveys → `FAILED` |
+| `HUSKY_EN_ROUTE` | Route published | Husky `ARRIVED` and within `arrival_max_m` → `DONE`; or `FAILED` (see below) |
+| `DONE` | Arrival confirmed | Husky moves out of range, or reports anything but `ARRIVED` → `HUSKY_EN_ROUTE` |
+| `FAILED` | No route, or the Husky failed too often | Final. The operator decides what to do next |
+
+When the Husky reports `FAILED`, the node replans from where the Husky is now, up to 2
+times. If a replanned route got the Husky less than 1 m closer, it treats the casualty as
+blocked and goes straight to `FAILED`.
+
+Only the first confirmed casualty is used. Restart the nodes to run another mission.
+
+**Route planner.** A\* over the 8-connected grid. The cost of a step to the next cell is
+
+```
+1.0 × step length + 4.0 × slope / 25° + 4.0 × sigma / 0.5 m
+```
+
+The goal is the first drivable cell the search reaches in a ring 1.6–2.5 m from the
+casualty. It is never the casualty's own cell: a person lying down can look drivable in the
+map, but Nav2 then refuses the goal because the person is an obstacle. Cells within 1 m of
+the Husky are allowed regardless, because the drone sees the Husky's own body as steep
+ground. Every 6th cell of the route is kept (`route_step`), about one waypoint every 3 m,
+always including the last. The Husky's own cell is dropped.
+
+**Parameters**
+
+| Parameter | Default | |
+|---|---|---|
+| `area_x0`, `area_y0`, `area_width`, `area_height` | -18, -18, 36, 36 | Search area (m) |
+| `lane_spacing` | 6.0 | Distance between lawnmower lanes (m) |
+| `auto_start` | false | Start the search when the drone reports `IDLE` |
+| `route_step` | 6 | Keep every Nth route cell |
+| `arrival_max_m` | 3.0 | Furthest the Husky can be from the casualty for `DONE` |
+| `click_box_size` | 8.0 | Size of the search box around a point clicked in RViz (m) |
+| `terrain_resolution`, `terrain_size_x`, `terrain_size_y` | 0.5, 40, 40 | Must match `terrain_map_node` |
+| `mission_frame` | `world` | Frame of the paths sent to the drone |
+
+During `SEARCHING`, clicking a point in RViz with *Publish Point* (`/parrot1/clicked_point`)
+sends the drone to search an 8 × 8 m box around it.
+
+## husky_node
+
+Receives the route and drives it. Source: [huskyNode.cpp](HUSKY/huskyNode.cpp), which
+handles the frames, final approach and hold watch, and [husky.cpp](HUSKY/husky.cpp), which
+sends the Nav2 goals.
+
+- **Frames.** Route points are in world coordinates. Nav2 runs in `nav_frame`
+  (`husky1_odom`). The world → `husky1_odom` offset is measured again each time a goal is
+  sent, by comparing the TF pose with the raw `/husky1/odometry` pose. `husky1_map` isn't
+  used, because SLAM's map frame jumped by metres on the slopes.
+- **Waypoints.** One `NavigateToPose` goal per waypoint, facing the next waypoint. If Nav2
+  can't reach an intermediate waypoint, the node skips it and tries the next one. The route
+  fails only if the last waypoint fails, or if more than 2 waypoints in a row are skipped.
+- **Final approach.** Nav2's goal tolerance is 0.5 m and odometry drifts, so the node
+  measures the true distance to the casualty when the route ends. If it is more than
+  `approach_max_m` (2.5 m) but within `approach_range_m` (6 m), the node sends a goal
+  `approach_standoff_m` (2.0 m) from the casualty, up to `approach_attempts` (3) times.
+- **Settle.** The node reports `ARRIVED` only after the Husky has been slower than
+  `still_speed_mps` (0.01 m/s) for `still_time_s` (2 s). If that takes longer than
+  `settle_timeout_s` (20 s), the route fails.
+- **Hold watch.** After arrival, the stop position is published on `/mission/husky_hold`.
+  If the Husky moves more than `hold_drift_m` (0.3 m) from it, the node reports `EN_ROUTE`
+  and drives back, up to `hold_reapproaches` (2) times, and then reports `FAILED`.
+- **Stop button.** `/husky1/estop` set to `true` cancels the current goal and holds.
+  Setting it back to `false` resumes the route.
+
+**Statuses**, published latched on `/mission/husky_status` whenever they change:
+
+| Status | Meaning |
+|---|---|
+| `IDLE` | No route yet |
+| `EN_ROUTE` | Driving, approaching, settling, or driving back after drift |
+| `STOPPED` | Stop button held mid-route |
+| `ARRIVED` | Stopped within the stand-off and staying there |
+| `FAILED` | Route, approach or hold failed |
+
+## Topics and services
+
+Every topic name used here is defined once, in `namespace topics` in
+[dataStructures.hpp](dataStructures.hpp). "Latched" means `QoS(1).reliable().transient_local()`.
+The cost of this is that a hand-published message must use the same QoS (see
+[Testing](#testing)).
+
+| Topic | Type | From → to | QoS |
+|---|---|---|---|
+| `/mission/state` | `std_msgs/String` | control → all | latched |
+| `/mission/casualty` | `geometry_msgs/PointStamped` | parrot → control, husky | latched |
+| `/mission/casualty_candidate` | `geometry_msgs/PointStamped` | parrot → dashboard (awaiting review) | latched |
+| `/mission/route` | `nav_msgs/Path` | control → husky | latched |
+| `/mission/husky_status` | `std_msgs/String` | husky → control | latched |
+| `/mission/husky_hold` | `geometry_msgs/PointStamped` | husky → dashboard | latched |
+| `/parrot1/mission/path` | `nav_msgs/Path` | control → parrot | latched |
+| `/parrot1/mission/status` | `std_msgs/String` | parrot → control | latched |
+| `/CasulityDiscovered` | `std_msgs/Bool` | parrot → dashboard | latched |
+| `/CasulityConfirmed` | `std_msgs/Bool` | dashboard → parrot | latched |
+| `/mission_control/{husky1,parrot1}/estop` | `std_msgs/Bool` | dashboard → control | default |
+| `/husky1/estop`, `/parrot1/estop` | `std_msgs/Bool` | control → robot | default |
+| `/parrot1/terrain_points` | `sensor_msgs/PointCloud2` | terrain_map → control, dashboard | sensor data |
+| `/parrot1/terrain_seed` | `sensor_msgs/PointCloud2` | bag → terrain_map | |
+| `/parrot1/odometry`, `/husky1/odometry` | `nav_msgs/Odometry` | sim (raw, world frame) | sensor data |
+| `/parrot1/scan/points` | `sensor_msgs/PointCloud2` | sim → terrain_map, parrot (down LiDAR) | sensor data |
+| `/parrot1/obstacle_scan` | `sensor_msgs/LaserScan` | sim → parrot (360° LiDAR) | sensor data |
+| `/parrot1/thermal_camera`, `/parrot1/camera/depth/image` | `sensor_msgs/Image` | sim → parrot | sensor data |
+| `/parrot1/cmd_vel` | `geometry_msgs/Twist` | parrot → sim | default |
+| `/husky1/navigate_to_pose` | `nav2_msgs/NavigateToPose` action | husky → Nav2 | |
+
+Services on `system_control_node` (`std_srvs/Trigger`):
+
+- `/mission/start` starts the area search.
+- `/mission/stop` makes the drone stop and hover.
+
+## Frames
+
+- **Two odometry topics per robot.** `/<robot>/odometry` is the raw pose from Gazebo, in
+  world coordinates; every node here uses it. `/<robot>/odom` is the EKF output and isn't
+  used. For the Parrot it is several metres off in x and y.
+- **Per-robot TF.** Each robot's transforms are on `/husky1/tf` and `/parrot1/tf`, not on
+  `/tf`. `husky_node` remaps `/tf` in its own constructor. Any new node that needs
+  transforms must do the same, or be started with
+  `-r /tf:=/<robot>/tf -r /tf_static:=/<robot>/tf_static`.
+- **Mission positions are world coordinates.** The terrain map is stamped `parrot1_odom`,
+  which matches the world in this simulation (see the "ponytail" note in `tryPlan()`).
+  If that ever changes, a TF lookup is needed there.
+
+## Testing
+
+**Mission logic without Gazebo.**
+[tools/mission_logic_test.py](tools/mission_logic_test.py) fakes the world (flat ground, a
+5 m hill, trees, the Husky and the casualty), the drone's search, odometry drift and Nav2.
+It tests the real `terrain_map_node`, `system_control_node` and `husky_node`:
 
 ```bash
-ros2 launch 41068_ignition_bringup control.launch.py nodes:=husky,parrot
+ros2 run control_template system_control_node &
+ros2 run control_template terrain_map_node &
+ros2 run control_template husky_node &
+python3 tools/mission_logic_test.py --scenario nominal
+# scenarios: nominal, estop, nav_abort, unreachable, drift, lost_goal
 ```
 
-To start with a previously scanned terrain map instead of a blank one, pass `height_map`
-(a folder name in `41068_ignition_bringup/pre_scanned_height_maps/`, or a full bag path).
-The terrain builder loads it once at startup and live LiDAR scans keep refining it:
+**In Gazebo:**
+- [tools/thermal_shape_sweep.py](tools/thermal_shape_sweep.py) teleports the drone around a
+  target and measures its blob with the same maths as the detector. It was used to set the
+  size and elongation limits.
+- [tools/husky_park_test.py](tools/husky_park_test.py) checks whether the Husky stays put
+  on a slope with zero command.
+- [tools/terrain_reachability.py](tools/terrain_reachability.py) flood-fills the real
+  terrain mesh with the same slope rule. Its results are conservative: it rates pose 2
+  unreachable, but the Husky reached it.
+- `./run_simulation.sh --trace --pose N` runs the full mission, scored by `mission_logger.py`
+  into `~/trace_results/results.csv`.
+
+**By hand.** The mission topics are latched, so every `ros2 topic pub` and `echo` on them
+needs `--qos-durability transient_local --qos-reliability reliable`. Without those options,
+messages are silently never delivered.
 
 ```bash
-ros2 launch 41068_ignition_bringup control.launch.py height_map:=terrain_demo
-```
-
-To save a new map after a full scan, record `/parrot1/terrain_points` for a few seconds into
-that folder: `ros2 bag record -o <folder> /parrot1/terrain_points`.
-
-## Node reference
-
-### parrot_node
-
-Flies the drone: wait for odometry, climb, fly the search pattern, hold.
-Source: [ParrotNode.cpp](PARROT/ParrotNode.cpp), [parrot.cpp](PARROT/parrot.cpp).
-
-- Subscribes to `/parrot1/odometry` (`nav_msgs/Odometry`)
-- Subscribes to `/parrot1/obstacle_scan` (`sensor_msgs/LaserScan`): horizontal 360 deg lidar
-  on top of the drone, used to steer around trees and slopes
-- Subscribes to `/parrot1/scan/points` (`sensor_msgs/PointCloud2`): the down lidar under the
-  hull, used for height above ground
-- Publishes `/parrot1/cmd_vel` (`geometry_msgs/Twist`)
-- Publishes `/parrot1/obstacle_markers` (`visualization_msgs/MarkerArray`)
-- Subscribes to `/parrot1/thermal_camera` and `/parrot1/camera/depth/image`
-- Publishes user-confirmed detections on `/mission/casualty` (`geometry_msgs/PointStamped`)
-- Publishes `true` on `/CasulityDiscovered` (`std_msgs/Bool`) when a casualty is detected.
-- Subscribes to `/CasulityConfirmed` (`std_msgs/Bool`) and waits indefinitely for a
-  `true` or `false` response.
-
-The control loop runs every 100 ms. The state is worked out fresh on every cycle.
-`target_altitude` (default 7 m) is height **above ground**: the distance down to the
-highest down-lidar return, so the drone follows hills and rises over canopies. Odometry z
-is not used.
-
-Thermal detection converts 16-bit Kelvin-centikelvin images to Celsius, extracts hot
-connected components, rejects blobs without valid depth, and converts the best candidate
-to the odometry frame. Before that conversion, the Parrot rotates in place to center the
-heat signature in the thermal camera, then uses the aligned camera bearing for the
-world-coordinate calculation. Small hot footprints are retained by default with a 1-pixel
-minimum blob area and a 3x3 morphology kernel. These can be tuned with
-`minimum_heat_blob_area:=N` and `thermal_morphology_kernel_size:=N`. Three spatially
-consistent frames are required by default. Set `show_camera_windows:=true` to enable the
-OpenCV thermal and depth diagnostics.
-
-When a candidate is detected, the Parrot publishes `true` on `/CasulityDiscovered` and
-holds its position until a response arrives on `/CasulityConfirmed`. A `false` response
-dismisses the candidate and resumes patrol. A `true` response confirms the casualty,
-publishes its position to mission control, flies to the 5 m review point, circles the
-casualty, and then resumes the saved patrol route. For example:
-
-```bash
-ros2 topic pub --once /CasulityConfirmed std_msgs/msg/Bool "{data: true}"
-```
-
-States:
-
-- `WAITING_FOR_ODOM`: no odometry received yet. Nothing is published.
-- `CLIMBING`: not yet within 0.5 m of the target height. Vertical command only. Happens
-  once; after that the height is held while flying.
-- `SEARCHING`: at altitude, waypoints remaining. Steer toward the current waypoint.
-- `HOLDING`: at altitude, all waypoints reached. Zero velocity every cycle.
-
-The state is logged when it changes. It is not published.
-
-### husky_node
-
-Receives a planned route, converts it into the frame Nav2 uses, and drives it.
-Source: [huskyNode.cpp](HUSKY/huskyNode.cpp), [husky.cpp](HUSKY/husky.cpp).
-
-- Subscribes to `/mission/route` (`nav_msgs/Path`)
-- Subscribes to `/husky1/tf` and `/husky1/tf_static` (`tf2_msgs/TFMessage`)
-- Publishes `/mission/husky_status` (`std_msgs/String`)
-- Action client for `/husky1/navigate_to_pose` (`nav2_msgs/NavigateToPose`)
-
-It has no parameters. Every 200 ms it checks whether a route is waiting; once Nav2's
-action server is up and the `husky1_odom` to `husky1_map` transform is available, it hands
-the route to the `Husky` class. A route that arrives while another is being driven is
-ignored.
-
-Statuses:
-
-- `IDLE`: no route received yet.
-- `EN_ROUTE`: driving; one Nav2 goal is active.
-- `ARRIVED`: the last waypoint succeeded.
-- `FAILED`: Nav2 rejected a goal, or a goal ended in anything other than success.
-
-The status is published only when it changes.
-
-### terrain_map_node
-
-Builds the terrain map from the Parrot LiDAR. Each 0.5 m cell of a 40 x 40 m grid, centred
-on the origin, keeps a running mean (height) and variance (roughness) of its returns.
-Above 50 returns, old data fades out so moved objects clear. Cells whose returns spread
-more than 0.5 m (canopy over ground) are blocked for the Husky. Prints a statistics block
-every 5 s.
-Source: [terrain_map_node.cpp](SYSTEM_CONTROL/terrain_map_node.cpp),
-[terrain_map.cpp](SYSTEM_CONTROL/terrain_map.cpp).
-
-- Subscribes to `/parrot1/scan/points` (`sensor_msgs/PointCloud2`)
-- Subscribes to `/parrot1/odometry` (`nav_msgs/Odometry`, raw Gazebo pose)
-- Uses `/parrot1/tf_static` for the LiDAR mount only
-- Publishes `/parrot1/terrain_points` (`sensor_msgs/PointCloud2`, fields x, y, z, sigma,
-  count; one point per observed cell)
-
-### system_control_node
-
-Owns the mission: plans the route over the terrain map and tracks progress.
-Source: [systemControlNode.cpp](SYSTEM_CONTROL/systemControlNode.cpp).
-
-- Subscribes to `/parrot1/terrain_points` (`sensor_msgs/PointCloud2`)
-- Subscribes to `/husky1/odometry` (`nav_msgs/Odometry`)
-- Subscribes to `/mission/casualty` (`geometry_msgs/PointStamped`)
-- Subscribes to `/mission/husky_status` (`std_msgs/String`)
-- Publishes `/mission/route` (`nav_msgs/Path`)
-- Publishes `/mission/state` (`std_msgs/String`)
-
-States:
-
-- `SEARCHING`: entered when the node starts. Leaves when the first casualty message
-  arrives.
-- `PLANNING`: entered when a casualty has arrived. Leaves when a route is found. Planning
-  is retried every second.
-- `HUSKY_EN_ROUTE`: entered when the route has been published. Leaves when the Husky
-  reports `ARRIVED` or `FAILED`.
-- `DONE`: entered when the Husky reported `ARRIVED`. Never leaves.
-- `FAILED`: entered when the Husky reported `FAILED`. Never leaves.
-
-Only the first casualty is used; later ones are ignored. `DONE` and `FAILED` are final, so
-restart the node to run another mission.
-
-## Topics
-
-Every topic name is defined once, in `namespace topics` in
-[dataStructures.hpp](dataStructures.hpp).
-
-- `ROUTE`: `/mission/route`, `nav_msgs/Path`, control to husky, latched
-- `HUSKY_STATUS`: `/mission/husky_status`, `std_msgs/String`, husky to control, latched
-- `CASUALTY`: `/mission/casualty`, `geometry_msgs/PointStamped`, (not built) to control,
-  latched
-- `STATE`: `/mission/state`, `std_msgs/String`, control to all, latched
-- `PARROT_ODOM`: `/parrot1/odometry`, `nav_msgs/Odometry`, sim to parrot, default QoS,
-  depth 10
-- `PARROT_CMD_VEL`: `/parrot1/cmd_vel`, `geometry_msgs/Twist`, parrot to sim, default QoS,
-  depth 10
-- `PARROT_SCAN`: `/parrot1/scan/points`, `sensor_msgs/PointCloud2`, sim to terrain_map,
-  sensor data QoS
-- `PARROT_TERRAIN`: `/parrot1/terrain_points`, `sensor_msgs/PointCloud2`, terrain_map
-  to control, sensor data QoS
-- `HUSKY_ODOM`: `/husky1/odometry`, `nav_msgs/Odometry`, sim to control, sensor data QoS
-- `HUSKY_NAVIGATE`: `/husky1/navigate_to_pose`, `nav2_msgs/NavigateToPose` action, husky
-  to Nav2
-- `HUSKY_TF`: `/husky1/tf`, `tf2_msgs/TFMessage`, sim and Nav2 to husky, TF default QoS
-- `HUSKY_TF_STATIC`: `/husky1/tf_static`, `tf2_msgs/TFMessage`, sim to husky, TF default
-  QoS
-
-"Latched" means reliable, transient local, depth 1. A node that starts late still receives
-the last message, so the nodes can be started in any order. The cost is that both ends must
-use exactly this QoS, including anything published by hand.
-
-## How it works
-
-### Parrot search
-
-The search pattern is a lawnmower sweep, built once at start-up. It covers a 16 m by 16 m
-square whose corner is at (-10, -10), in rows 4 m apart. That gives five rows and ten
-waypoints, starting at (-10, -10) and ending at (6, 6).
-
-The control law has three parts:
-
-- Altitude: vertical speed is 0.8 times the height-above-ground error, limited to 1 m/s.
-  It is applied during the climb and throughout the search.
-- Heading: turn rate is 1.5 times the heading error toward the waypoint, limited to
-  1 rad/s.
-- Speed: the drone moves forward only when it is within 0.5 rad of the right heading.
-  Forward speed is half the remaining distance, capped at `max_speed`. This stops it
-  swinging wide on the sharp turns at the end of each row.
-
-### Terrain map
-
-[terrain_map.cpp](SYSTEM_CONTROL/terrain_map.cpp) turns the terrain point cloud into a grid
-of slopes. With the default parameters the grid is 40 by 40 cells, centred on the origin.
-The map is rebuilt from scratch every time a cloud arrives:
-
-1. Each cell takes the height of the highest point that falls inside it.
-2. Small holes are filled. An empty cell with at least three known neighbours, out of
-   eight, takes their average. This runs twice.
-3. Each cell's slope is the steepest height change to any of its four direct neighbours,
-   as an angle. A cell needs at least two known neighbours to get a slope.
-4. A cell can be driven on if its slope is known and no more than 25 degrees.
-
-Cells on the outer edge of the grid never get a slope, so they are never drivable.
-
-### Route planner
-
-[terrain_planner.cpp](SYSTEM_CONTROL/terrain_planner.cpp) runs A* over the grid, moving to
-any of the eight neighbouring cells that can be driven on. The cost of a step is
-
-```
-cost = 1.0 x step length + 4.0 x (slope of the next cell / 25)
-```
-
-where the step length is 1 for a straight move and 1.41 for a diagonal. Flat ground is
-therefore preferred even when it is longer. The planner returns the centres of the cells
-along the route, or nothing if the start or goal is outside the grid or no route exists.
-
-### From plan to driving
-
-1. `system_control_node` plans from the Husky's current position to the casualty.
-2. It keeps every second point (`route_step`), always keeping the last, so Nav2 gets fewer
-   and longer legs.
-3. It drops the first point, which is where the Husky already is, and publishes the rest
-   on `/mission/route`.
-4. `husky_node` converts each point from the `husky1_odom` frame to the `husky1_map` frame.
-5. `Husky` sends one Nav2 goal per waypoint. Each goal faces the next waypoint; the last
-   one keeps the heading the robot arrived with.
-
-## Frames and odometry
-
-Each robot has two odometry topics, and they are not interchangeable.
-
-- `/<robot>/odometry` is raw, straight from Gazebo. It is in world coordinates for both
-  the Parrot and the Husky.
-- `/<robot>/odom` is the EKF output from robot_localization. For the Parrot, x and y are
-  several metres off. For the Husky, it agrees with the raw topic at start.
-
-Transforms are published per robot, on `/husky1/tf` and `/parrot1/tf`, not on the global
-`/tf`. A TF listener always subscribes to `/tf`, so `husky_node` remaps it in its own
-constructor. Any new node that needs transforms must do the same, or be started with
-`-r /tf:=/<robot>/tf -r /tf_static:=/<robot>/tf_static`.
-
-The route on `/mission/route` is stamped with the terrain cloud's frame, `parrot1_odom`.
-`husky_node` treats the points as `husky1_odom` coordinates. This relies on both frames
-matching world coordinates.
-
-## Testing by hand
-
-The mission topics are latched, so `--qos-durability transient_local` is required on every
-hand-published message. Without it the message is silently never delivered.
-
-Watch the mission:
-
-```bash
+# Watch
 ros2 topic echo --qos-durability transient_local --qos-reliability reliable /mission/state
 ros2 topic echo --qos-durability transient_local --qos-reliability reliable /mission/husky_status
-```
 
-Publish a casualty. `system_control_node` should move to `PLANNING`, then to
-`HUSKY_EN_ROUTE` once it finds a route:
+# Fake a confirmed casualty (control goes to PLANNING)
+ros2 topic pub --once --qos-durability transient_local --qos-reliability reliable /mission/casualty \
+  geometry_msgs/msg/PointStamped "{point: {x: -15.0, y: 0.0}}"
 
-```bash
-ros2 topic pub --once --qos-durability transient_local /mission/casualty \
-  geometry_msgs/msg/PointStamped "{point: {x: 5.0, y: -5.0}}"
-```
+# Answer a detection review
+ros2 topic pub --once --qos-durability transient_local --qos-reliability reliable /CasulityConfirmed \
+  std_msgs/msg/Bool "{data: true}"
 
-Send a route straight to the Husky, bypassing the planner. The status should go
-`EN_ROUTE`, then `ARRIVED`:
-
-```bash
-ros2 topic pub --once --qos-durability transient_local /mission/route \
+# Send the Husky a route directly, bypassing the planner (world coordinates)
+ros2 topic pub --once --qos-durability transient_local --qos-reliability reliable /mission/route \
   nav_msgs/msg/Path "{poses: [{pose: {position: {x: 2.0, y: 0.0}}}, {pose: {position: {x: 4.0, y: 1.0}}}]}"
 ```
-
-Fake a Husky status. This only has an effect while the mission is in `HUSKY_EN_ROUTE`:
-
-```bash
-ros2 topic pub --once --qos-durability transient_local /mission/husky_status \
-  std_msgs/msg/String "{data: ARRIVED}"
-```
-
-
-## Known issues
-
-- Thermal localization assumes the thermal and depth images are pixel-aligned and uses
-  configured camera mounting offsets rather than TF. These assumptions match the current
-  Parrot simulation model but must be updated if its sensors move independently.
-- The Parrot ignores the mission. `/mission/state` has no subscriber. The drone flies its
-  whole pattern and holds, whatever the mission state is.
-- The terrain map has not been re-tested in the sim since the October 2026 rework. Earlier,
-  the map kept the highest point per cell and the lidar could not reach the ground from
-  the 20 m cruise altitude (its range was 8 m), so the planner reported "No traversable
-  route yet". The lidar now points down with a 30 m range, and cells keep a running mean
-  and variance.
-- The Husky stops short. Nav2's goal tolerance is 1.0 m. In testing the Husky reported
-  arrival 0.95 m from the final waypoint.
-- Nav2 also runs on the Parrot. `nav2:=True` starts Nav2 for every robot, and the Parrot's
-  Nav2 publishes on the same `/parrot1/cmd_vel` as `parrot_node`. The launch file has no
-  option for Nav2 on the Husky only.
-- The Parrot odometry change is not yet flight-tested. It builds, and the node subscribes
-  to the raw topic, but the search has not been re-flown in the simulator since.
-
-## Conventions for contributors
-
-- Topic names go in `namespace topics` in [dataStructures.hpp](dataStructures.hpp), with a
-  comment giving the message type and direction. No topic strings in node files.
-- Shared types (anything two nodes must agree on) also go in `dataStructures.hpp`. A type
-  used by one file stays in that file.
-- Robot class versus node class. Movement and the robot's own topics go in the robot
-  class (`Parrot`, `Husky`). Parameters, timers, mission topics and state go in the node
-  class (`ParrotNode`, `HuskyNode`).
-- Parameters are declared by the node, in its constructor's initialiser list, and passed
-  down as plain values.
-- Mission topics are latched. Use `rclcpp::QoS(1).reliable().transient_local()` on both
-  ends.
-- Helpers private to one file go in an anonymous namespace at the top of that file.
-- One executable per node, each with its own `main()` at the bottom of the node's source
-  file and its own target in [CMakeLists.txt](CMakeLists.txt).
-
-## Further reading
-
-- [41068_ignition_bringup README](../41068_ignition_bringup/README.md): installation,
-  launch arguments, worlds and the demo scripts.
-- [Repository README](../../../README.md): the project concept.
