@@ -2,6 +2,7 @@
 
 #include "PARROT/ParrotNode.hpp"
 
+#include <chrono>
 #include <iostream>
 #include <poll.h>
 #include <rclcpp/rclcpp.hpp>
@@ -59,13 +60,20 @@ int main(int argc, char* argv[])
 {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<ParrotNode>();
+    rclcpp::executors::SingleThreadedExecutor executor;
+    executor.add_node(node);
     rclcpp::WallRate rate(10.0);
     std::size_t reportedCasualties = 0;
     bool reportedDetection = node->hasDetectedCasualty();
     std::cout << "Commands: list, confirm <index>, deny <index>, quit\n";
 
     while (rclcpp::ok()) {
-        rclcpp::spin_some(node);
+        // spin_all, not spin_some: spin_some takes one message per subscription
+        // per call, so at 10 Hz it kept only every other 20 Hz odometry message.
+        // The thermal detector then often had no odometry within 0.03 s of a
+        // depth frame and silently dropped the view (seen in Gazebo, 30 Oct:
+        // 5 views of the person in three search passes).
+        executor.spin_all(std::chrono::milliseconds(50));
 
         const bool detectedCasualty = node->hasDetectedCasualty();
         if (detectedCasualty != reportedDetection) {
