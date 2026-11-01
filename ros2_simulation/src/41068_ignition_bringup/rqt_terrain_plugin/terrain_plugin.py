@@ -680,8 +680,10 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._odom_time = None
         self._hold = None
         
-        # State array tracking whether each robot is currently estopped
-        self._robot_states = {'husky1': True, 'parrot1': True}
+        # True = robot running (button reads "Stop"). The drone starts PAUSED in
+        # the TRACE demo; _parrot_status_cb corrects this if it is already flying.
+        self._robot_states = {'husky1': True, 'parrot1': False}
+        self._parrot_started = False   # operator has pressed Start Parrot at least once
         
         # Update UI text dynamically at 5 FPS
         self._ui_timer = QTimer(self)
@@ -850,6 +852,11 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
 
     def _parrot_status_cb(self, msg: String) -> None:
         self._parrot_status = msg.data
+        # parrot_node launched with start_paused:=false (or rqt restarted mid-run):
+        # the drone is already flying, so show "Stop Parrot".
+        if not self._parrot_started and msg.data in ('CLIMBING', 'IDLE', 'SEARCHING', 'HOLDING'):
+            self._robot_states['parrot1'] = True
+            self._parrot_started = True
 
     def _mission_state_cb(self, msg: String) -> None:
         if msg.data != self._mission_state and self._mission_state != 'unknown':
@@ -951,6 +958,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         elif self._mission_state == 'DONE':
             drone += (' (overwatch near the casualty)' if drone == 'HOLDING'
                       else ' (flying to overwatch near the casualty)')
+        elif not self._parrot_started:
+            drone += ' (on the ground: press Start Parrot to begin the search)'
         lines.append(f'<b>Drone:</b> {drone}')
         
         husky = self._husky_status
@@ -1017,6 +1026,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             self._publish_stop_state(clean_name, False)
             self._status.setText(f'{clean_name} stopButton published as False.')
             self._robot_states[clean_name] = True
+            if clean_name == 'parrot1':
+                self._parrot_started = True
 
         self._update_labels()
 
