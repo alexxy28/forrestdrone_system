@@ -33,7 +33,13 @@ def generate_launch_description():
     ))
 
     ld.add_action(ExecuteProcess(
-        cmd=['rqt', '--perspective-file', LaunchConfiguration('perspective_file')],
+        cmd=[
+            'rqt',
+            '--clear-config',
+            '--force-discover',
+            '--perspective-file',
+            LaunchConfiguration('perspective_file'),
+        ],
         output='screen',
     ))
 
