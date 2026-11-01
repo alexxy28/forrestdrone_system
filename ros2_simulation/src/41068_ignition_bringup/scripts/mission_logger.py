@@ -158,6 +158,7 @@ class MissionLogger(Node):
         self.husky_status = None
         self.husky_odom = None
         self.t_detect = self.t_confirm = self.t_route = self.t_end = None
+        self.t_search_start = None   # first Start Parrot; the drone may start paused
         self.estops = 0
         self.reported = False
         # After DONE: keep watching the Husky (sim seconds).
@@ -176,6 +177,7 @@ class MissionLogger(Node):
         self.create_subscription(String, '/mission/husky_status', self.on_husky_status, LATCHED)
         self.create_subscription(Odometry, '/husky1/odometry', self.on_odom, qos_profile_sensor_data)
         self.create_subscription(Bool, '/husky1/estop', self.on_estop, 10)
+        self.create_subscription(Bool, '/parrot1/estop', self.on_parrot_estop, 10)
         self.create_timer(5.0, self.fetch_ground_truth_once)
         self.get_logger().info(f'Recording mission (results -> {self.results_dir}/results.csv)')
 
@@ -265,6 +267,11 @@ class MissionLogger(Node):
         self.estops += 1
         self.log('Husky stop button: ' + ('STOP' if msg.data else 'START'))
 
+    def on_parrot_estop(self, msg):
+        if not msg.data and self.t_search_start is None:
+            self.t_search_start = time.time()
+        self.log('Parrot stop button: ' + ('STOP' if msg.data else 'START'))
+
     # ---------------- summary ----------------
     def report_once(self):
         if self.reported:
@@ -314,7 +321,8 @@ class MissionLogger(Node):
             'stop_dist_to_feet_origin_m': d(husky, human),
             'stop_dist_to_detected_m': d(husky, self.detected),
             'nav_result': self.husky_status or '', 'mission_state': self.state or '',
-            'search_s': (self.t_detect - self.t0) if self.t_detect else '',
+            # From the first Start Parrot (or logger start if the drone was never paused).
+            'search_s': (self.t_detect - (self.t_search_start or self.t0)) if self.t_detect else '',
             'confirm_to_end_s': (self.t_end - self.t_confirm) if (self.t_end and self.t_confirm) else '',
             'husky_estops': self.estops,
         }

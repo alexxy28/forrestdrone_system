@@ -4,9 +4,10 @@
 
 Starts, in order:
   1. Gazebo (terrain_demo, random casualty pose), Husky + Parrot, SLAM, Husky Nav2, RViz
-  2. after `control_delay` s: parrot_node, terrain_map_node, system_control_node
-     (auto_start: the drone begins its area search as soon as it has climbed),
-     husky_node
+  2. after `control_delay` s: parrot_node, terrain_map_node, system_control_node,
+     husky_node. The drone waits on the ground (PAUSED) until the operator
+     presses Start Parrot on the dashboard; it then climbs and (auto_start)
+     begins its area search
   3. the rqt operator dashboard (terrain map, camera feeds, confirm/reject casualty,
      stop buttons, mission state)
   4. mission_logger (log_results:=true): prints and saves a scored result per run
@@ -15,7 +16,7 @@ Starts, in order:
 
 Useful arguments: world:=terrain_demo rviz:=true rqt:=true auto_start:=true gui:=true
                   control_delay:=20.0 human_pose:=0..5 log_results:=true
-                  hold_check_s:=120
+                  hold_check_s:=120 parrot_start_paused:=true
 """
 
 from launch import LaunchDescription
@@ -46,6 +47,9 @@ def generate_launch_description():
                               description='Open the operator dashboard'),
         DeclareLaunchArgument('auto_start', default_value='true',
                               description='Drone starts searching without a service call'),
+        DeclareLaunchArgument('parrot_start_paused', default_value='true',
+                              description='Drone waits on the ground until Start Parrot '
+                                          'is pressed on the dashboard'),
         DeclareLaunchArgument('control_delay', default_value='20.0',
                               description='Seconds to wait for Gazebo/Nav2 before the mission nodes'),
         DeclareLaunchArgument('hold_check_s', default_value='120.0',
@@ -74,7 +78,10 @@ def generate_launch_description():
         period=LaunchConfiguration('control_delay'),
         actions=[IncludeLaunchDescription(
             launch_file('control.launch.py'),
-            launch_arguments={'auto_start': LaunchConfiguration('auto_start')}.items(),
+            launch_arguments={
+                'auto_start': LaunchConfiguration('auto_start'),
+                'parrot_start_paused': LaunchConfiguration('parrot_start_paused'),
+            }.items(),
         )],
     )
 

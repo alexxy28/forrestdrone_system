@@ -58,6 +58,7 @@ ros2 launch 41068_ignition_bringup control.launch.py auto_start:=true
 |---|---|---|
 | `nodes` | `all` | Comma-separated subset of `system_control`, `husky`, `parrot`, `terrain_map` |
 | `auto_start` | `false` | Start the area search as soon as the drone has climbed. If false, start it with `ros2 service call /mission/start std_srvs/srv/Trigger` |
+| `parrot_start_paused` | `false` | Keep the drone on the ground (`PAUSED`) until the dashboard's **Start Parrot** is pressed, or `ros2 topic pub --once /mission_control/parrot1/estop std_msgs/msg/Bool "{data: false}"`. `trace_demo.launch.py` sets it to `true` |
 | `height_map` | empty | Saved terrain map to preload: a folder name in `pre_scanned_height_maps/` (e.g. `terrain_demo`) or a bag path |
 | `use_sim_time` | `true` | |
 
@@ -136,7 +137,7 @@ waypoint.
 | `IDLE` | At altitude, no path received. `auto_start` starts the search on this state |
 | `SEARCHING` | Flying a path (search, review, survey or overwatch) |
 | `HOLDING` | Path finished, hovering. Mission control uses this to send the next task |
-| `PAUSED` | Stop button held, or waiting for the operator to review a detection |
+| `PAUSED` | Stop button held (including at launch with `start_paused`, before take-off), or waiting for the operator to review a detection |
 
 An empty path on `/parrot1/mission/path` means "stop and hover".
 

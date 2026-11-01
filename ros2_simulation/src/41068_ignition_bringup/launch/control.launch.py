@@ -61,6 +61,13 @@ def generate_launch_description():
                     '(otherwise: ros2 service call /mission/start std_srvs/srv/Trigger)',
     ))
     ld.add_action(DeclareLaunchArgument(
+        'parrot_start_paused',
+        default_value='false',
+        description='Keep the drone on the ground (PAUSED) until Start Parrot is pressed '
+                    '(or: ros2 topic pub --once /mission_control/parrot1/estop '
+                    'std_msgs/msg/Bool "{data: false}")',
+    ))
+    ld.add_action(DeclareLaunchArgument(
         'height_map',
         default_value='',
         description='Saved terrain map to preload into terrain_map_node: a name in '
@@ -75,6 +82,9 @@ def generate_launch_description():
         params = {'use_sim_time': use_sim_time}
         if name == 'system_control':
             params['auto_start'] = ParameterValue(auto_start, value_type=bool)
+        if name == 'parrot':
+            params['start_paused'] = ParameterValue(
+                LaunchConfiguration('parrot_start_paused'), value_type=bool)
         ld.add_action(Node(
             package='control_template',
             executable=name + '_node',

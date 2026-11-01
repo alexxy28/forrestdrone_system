@@ -33,7 +33,9 @@ This builds the workspace and starts the full mission:
 - the four mission nodes, after a 20 s delay
 - the rqt operator dashboard and the results logger
 
-The drone takes off and starts searching by itself.
+The drone waits on the ground (`PAUSED`) until you press **Start Parrot** on the dashboard.
+It then takes off and starts searching by itself. To have it take off straight away, pass
+`parrot_start_paused:=false` to `trace_demo.launch.py`.
 
 Common variations:
 
@@ -100,7 +102,8 @@ The rqt dashboard opens with `--trace`. It shows:
   - **Reject (false alarm)** throws the detection away, and the drone goes back to
     searching.
   - **Stop Husky** and **Stop Parrot** stop a robot. The button then reads *Start* and
-    resumes the robot.
+    resumes the robot. The Parrot button reads **Start Parrot** at launch: press it to
+    begin the mission.
 - **Mission state**: `SEARCHING`, `PLANNING`, `HUSKY_EN_ROUTE`, `DONE` or `FAILED`.
 
 To confirm or reject from a terminal instead (`false` rejects):

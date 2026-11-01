@@ -2,6 +2,7 @@
 //
 // Run:  ros2 run control_template parrot_node
 // It climbs, then hovers in IDLE until system_control_node sends a path.
+// With start_paused:=true it first waits on the ground until the stop button is released.
 
 #include "ParrotNode.hpp"
 
@@ -73,6 +74,8 @@ casualtyConfirmedSub_ = create_subscription<std_msgs::msg::Bool>(
     std::bind(&ParrotNode::onCasualtyConfirmed, this, std::placeholders::_1));
 
 // Stop button: true = freeze in place, false = carry on.
+// start_paused: wait on the ground in PAUSED until the operator presses Start.
+stopped_ = declare_parameter<bool>("start_paused", false);
 const std::string stopTopic = declare_parameter<std::string>("stop_topic", "/parrot1/estop");
 stopSub_ = create_subscription<std_msgs::msg::Bool>(
     stopTopic, 10,
@@ -81,6 +84,9 @@ stopSub_ = create_subscription<std_msgs::msg::Bool>(
 timer_ = create_wall_timer(std::chrono::milliseconds(100), std::bind(&ParrotNode::tick, this));
 
 RCLCPP_INFO(get_logger(), "parrot_node started, waiting for missions on %s", pathTopic.c_str());
+if (stopped_) {
+    RCLCPP_WARN(get_logger(), "Starting PAUSED: press Start Parrot on the dashboard to take off");
+}
 }
 
 std::vector<Casualty> ParrotNode::getCasualties() const
