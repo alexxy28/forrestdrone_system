@@ -58,6 +58,7 @@ bool hasMission_{false};
 std::optional<std::pair<double, double>> verifyTarget_;
 std::optional<std::size_t> verifyCasualtyIndex_;
 std::optional<std::size_t> pendingCasualtyIndex_;
+std::optional<std::size_t> lastReviewedCasualtyIndex_;
 bool awaitingCasualtyConfirmation_{false};
 bool casualtyConfirmationReceived_{false};
 bool casualtyConfirmed_{false};

@@ -168,12 +168,12 @@ controller_server:
       - PathAlign
       - PathDist
       - GoalDist
-      BaseObstacle.scale: 0.02
-      PathAlign.scale: 32.0
+      BaseObstacle.scale: 20.0 # Raised to make sure the robot properly avoids obstacles
+      PathAlign.scale: 16.0 # Change from 32 to allow around trees
       PathAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 32.0
+      GoalAlign.scale: 16.0 # Change from 32 to allow around trees
       GoalAlign.forward_point_distance: 0.1
-      PathDist.scale: 32.0
+      PathDist.scale: 16.0 # Change from 32 to allow around trees
       GoalDist.scale: 24.0
       RotateToGoal.scale: 32.0
       RotateToGoal.xy_goal_tolerance: 0.5

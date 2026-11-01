@@ -158,8 +158,33 @@ void ParrotNode::onStop(const std_msgs::msg::Bool::SharedPtr msg)
 }
 
 void ParrotNode::onCasualtyConfirmed(const std_msgs::msg::Bool::SharedPtr msg)
+/*
+ * Handles the reception of a casualty confirmation message.
+ * If the system is not currently awaiting confirmation, it checks if the message
+ * corresponds to the last reviewed casualty and processes it accordingly.
+ * Otherwise, it updates the internal state with the received confirmation.
+ */
 {
-    if (!awaitingCasualtyConfirmation_) {
+    if (!awaitingCasualtyConfirmation_) { 
+        if (!msg->data || !lastReviewedCasualtyIndex_) {
+            return; // No confirmation or no last reviewed casualty index, nothing to do
+        }
+
+        const auto casualties = thermalCamera_.getCasualties(); // Get the list of casualties from the thermal camera
+        const auto casualty = std::find_if(casualties.begin(), casualties.end(), [&](const auto& item) {
+            return item.index == *lastReviewedCasualtyIndex_; // Match the casualty with the last reviewed index
+        });
+        if (casualty == casualties.end()) {
+            return;
+        }
+
+        if (confirmCasualty(casualty->index)) { // If the casualty is confirmed, start the review process
+            startCasualtyReview(*casualty);
+            setState(State::SEARCHING); // Update the system state to SEARCHING after accepting a late casualty confirmation
+            RCLCPP_WARN(get_logger(),
+                        "Late casualty confirmation accepted for %zu: restarting review/orbit workflow", // Log the acceptance of a late casualty confirmation
+                        casualty->index);
+        }
         return;
     }
     casualtyConfirmationReceived_ = true;
@@ -247,6 +272,7 @@ casualtyConfirmationReceived_ = false;
 if (!casualtyConfirmed_) {
     if (pendingCasualtyIndex_) {
         denyCasualty(*pendingCasualtyIndex_);
+        lastReviewedCasualtyIndex_ = pendingCasualtyIndex_;
     }
     pendingCasualtyIndex_.reset();
     casualtyConfirmed_ = false;
@@ -259,6 +285,7 @@ if (!casualtyConfirmed_) {
         : casualties.end();
     if (casualty != casualties.end()) {
         confirmCasualty(casualty->index);
+        lastReviewedCasualtyIndex_ = casualty->index;
         startCasualtyReview(*casualty);
         setState(State::SEARCHING);
         parrot_.flyToWaypoint();
