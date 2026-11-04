@@ -37,7 +37,8 @@ With no arguments, open the interactive menu.
 Options:
       --menu            Open the interactive menu
       --setup           Update from GitHub, install dependencies, and build
-  -w, --world WORLD     World: simple_trees, large_demo, or terrain_demo
+  -w, --world WORLD     World: simple_trees, large_demo, terrain_demo, or demo_2
+                        (demo_2 = terrain_demo with pine trees and grass)
       --husky-only      Launch only the Husky
       --parrot-only     Launch only the Parrot
       --no-rviz         Do not launch RViz
@@ -56,7 +57,8 @@ Options:
       --no-dashboard    Disable the rqt dashboard (TRACE)
       --no-logger       Disable mission scoring/results logging (TRACE)
       --auto-takeoff    Start the Parrot without pressing Start Parrot (TRACE)
-      --pose N          Casualty spawn 0-5 (default: random)
+      --pose N          Casualty spawn 0-5 (default: random), 6 = on the rock,
+                        unreachable by ground (test)
       --preload-map[=true|false]
                         With --trace: start from the saved terrain map for the
                         world (pre_scanned_height_maps/WORLD)
@@ -111,15 +113,15 @@ EOF
         if [[ "$TRACE" == true ]]; then toggle PRELOAD_MAP
         else echo 'Saved terrain maps require the full TRACE mission.'; fi ;;
       7)
-        read -r -p 'World (1 terrain_demo, 2 simple_trees, 3 large_demo): ' value || return 1
+        read -r -p 'World (1 terrain_demo, 2 simple_trees, 3 large_demo, 4 demo_2): ' value || return 1
         case "$value" in
-          1) WORLD=terrain_demo ;; 2) WORLD=simple_trees ;; 3) WORLD=large_demo ;;
+          1) WORLD=terrain_demo ;; 2) WORLD=simple_trees ;; 3) WORLD=large_demo ;; 4) WORLD=demo_2 ;;
           *) echo 'Invalid world selection.' ;;
         esac ;;
       8)
-        read -r -p 'Casualty pose (0-5, or r for random): ' value || return 1
+        read -r -p 'Casualty pose (0-5, 6 = unreachable test, or r for random): ' value || return 1
         case "$value" in
-          [0-5]) POSE="$value" ;; r|R) POSE='' ;; *) echo 'Invalid pose.' ;;
+          [0-6]) POSE="$value" ;; r|R) POSE='' ;; *) echo 'Invalid pose.' ;;
         esac ;;
       9)
         read -r -p 'Robots (1 both, 2 Husky only, 3 Parrot only): ' value || return 1
@@ -265,9 +267,9 @@ if [[ "$SETUP" == true ]]; then
 fi
 
 case "$WORLD" in
-  simple_trees|large_demo|terrain_demo) ;;
+  simple_trees|large_demo|terrain_demo|demo_2) ;;
   *)
-    echo "Invalid world '$WORLD'. Use simple_trees, large_demo, or terrain_demo." >&2
+    echo "Invalid world '$WORLD'. Use simple_trees, large_demo, terrain_demo, or demo_2." >&2
     exit 2
     ;;
 esac
@@ -277,8 +279,8 @@ if [[ -n "$ROS_DOMAIN" && ! "$ROS_DOMAIN" =~ ^[0-9]+$ ]]; then
   exit 2
 fi
 
-if [[ -n "$POSE" && ! "$POSE" =~ ^[0-5]$ ]]; then
-  echo "Pose must be 0-5." >&2
+if [[ -n "$POSE" && ! "$POSE" =~ ^[0-6]$ ]]; then
+  echo "Pose must be 0-6." >&2
   exit 2
 fi
 
@@ -331,7 +333,10 @@ fi
 POSE_ARGS=()
 [[ -n "$POSE" ]] && POSE_ARGS=(human_pose:="$POSE")
 MAP_ARGS=()
-[[ "$PRELOAD_MAP" == "true" ]] && MAP_ARGS=(height_map:="$WORLD")
+# demo_2 has terrain_demo's terrain, so it uses terrain_demo's saved map.
+MAP_WORLD="$WORLD"
+[[ "$WORLD" == "demo_2" ]] && MAP_WORLD="terrain_demo"
+[[ "$PRELOAD_MAP" == "true" ]] && MAP_ARGS=(height_map:="$MAP_WORLD")
 
 if [[ "$TRACE" == "true" ]]; then
   echo "Starting TRACE mission: world=$WORLD rviz=$RVIZ gui=$GUI human_pose=${POSE:-random} preload_map=$PRELOAD_MAP"

@@ -41,7 +41,8 @@ TerrainPlanner::plan(
     double start_x,
     double start_y,
     double goal_x,
-    double goal_y)
+    double goal_y,
+    bool optimistic)
 {
     int sx, sy, gx, gy;
 
@@ -71,6 +72,19 @@ TerrainPlanner::plan(
     // Nav2 then refuses the goal because the person is an obstacle (seen in
     // Gazebo, 27 Oct). A* stops at the first ring cell it reaches, i.e. the
     // closest stand-off point on the Husky's side.
+    // Unknown = inside the map but no slope/roughness yet (NaN). Outside the
+    // map getSlope() is finite and too steep, so that never counts.
+    auto drivable = [&](int x, int y) {
+        if (terrain_map_.isTraversable(x, y))
+            return true;
+        if (!optimistic)
+            return false;
+        const double slope = terrain_map_.getSlope(x, y);
+        const double sigma = terrain_map_.getSigma(x, y);
+        if (!std::isfinite(slope) || !std::isfinite(sigma))
+            return true;   // unknown (outside the map both are finite)
+        return slope <= OPTIMISTIC_SLOPE_DEG && sigma <= OPTIMISTIC_SIGMA_M;
+    };
     const double inner_cells = GOAL_MIN_STANDOFF_M / terrain_map_.resolution();
     const double outer_cells = GOAL_SEARCH_RADIUS_M / terrain_map_.resolution();
     const int cx = gx;
@@ -84,7 +98,7 @@ TerrainPlanner::plan(
         const int r = static_cast<int>(std::ceil(outer_cells));
         for (int dy = -r; dy <= r && !any; ++dy)
             for (int dx = -r; dx <= r && !any; ++dx)
-                any = in_ring(cx + dx, cy + dy) && terrain_map_.isTraversable(cx + dx, cy + dy);
+                any = in_ring(cx + dx, cy + dy) && drivable(cx + dx, cy + dy);
         if (!any) {
             RCLCPP_WARN(rclcpp::get_logger("terrain_planner"),
                         "No drivable cell %.1f-%.1f m from the casualty", GOAL_MIN_STANDOFF_M,
@@ -159,7 +173,7 @@ TerrainPlanner::plan(
         open.pop();
 
         if (in_ring(current.x, current.y) &&
-            terrain_map_.isTraversable(current.x, current.y))
+            drivable(current.x, current.y))
         {
             found = true;
             gx = current.x;   // the stand-off cell reached: the route ends here
@@ -180,7 +194,7 @@ TerrainPlanner::plan(
             // map (~0.5 m high), so they read as steep. Let it drive out.
             const bool near_start =
                 std::hypot(nx - sx, ny - sy) <= start_clear_cells;
-            if (!near_start && !terrain_map_.isTraversable(nx, ny))
+            if (!near_start && !drivable(nx, ny))
                 continue;
 
             const bool diagonal =

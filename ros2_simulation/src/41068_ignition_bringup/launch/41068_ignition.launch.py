@@ -29,9 +29,16 @@ _TERRAIN_DEMO_HUMAN_POSES = [
     '-15 -10 1 -1.7 0 0',
     '-15 0 0 -1.25 0 0',
     '-15 15 0 -1.5 0 0',
-    '12 15 1.4 -1.5 0 0',
+    '12 15 0.3 -1.5 0 0',    # was z 1.4: 1.2 m above the ground (terrain is 0.21 m here), the person floated
     '12 -5 0.75 -1.7 0 0',
     '2.3978 12.5679 0.4785 -1.7 0 0',
+]
+
+# Test poses: only with human_pose:=6 (or higher), never chosen at random.
+_TERRAIN_DEMO_TEST_POSES = [
+    # 6: on top of the flat rock north of the start (top 10.63 m, walls 60-80 deg;
+    #    the Husky's limit is 25 deg). Unreachable by ground: tests the FAILED path.
+    '-3.6 13.6 10.72 -1.57 0 0',
 ]
 
 
@@ -39,10 +46,12 @@ def _randomize_terrain_human_pose(world_path, choice='random'):
     with open(world_path, 'r', encoding='utf-8') as handle:
         world_text = handle.read()
 
-    # human_pose:=random (default) or 0-5 to repeat a scenario. This only sets
-    # where the simulated person spawns; the robots are never told.
-    if str(choice).strip().isdigit() and int(choice) < len(_TERRAIN_DEMO_HUMAN_POSES):
-        selected_pose = _TERRAIN_DEMO_HUMAN_POSES[int(choice)]
+    # human_pose:=random (default) or 0-5 to repeat a scenario, 6 for the
+    # unreachable test. This only sets where the simulated person spawns; the
+    # robots are never told.
+    poses = _TERRAIN_DEMO_HUMAN_POSES + _TERRAIN_DEMO_TEST_POSES
+    if str(choice).strip().isdigit() and int(choice) < len(poses):
+        selected_pose = poses[int(choice)]
     else:
         selected_pose = random.choice(_TERRAIN_DEMO_HUMAN_POSES)
     include_pattern = (
@@ -80,7 +89,9 @@ def _add_gazebo_with_world_randomization(context, *_args, **_kwargs):
 
     selected_pose = None
     option_count = 0
-    if world_name == 'terrain_demo':
+    # demo_2 is terrain_demo with pine trees and grass: same terrain, same poses.
+    randomized_world = world_name in ('terrain_demo', 'demo_2')
+    if randomized_world:
         world_path, selected_pose, option_count = _randomize_terrain_human_pose(
             world_path, LaunchConfiguration('human_pose').perform(context))
 
@@ -104,11 +115,11 @@ def _add_gazebo_with_world_randomization(context, *_args, **_kwargs):
     actions = [ign_launch]
     if selected_pose is not None:
         actions.append(LogInfo(msg=(
-            f'terrain_demo: selected human pose {selected_pose} '
+            f'{world_name}: selected human pose {selected_pose} '
             f'from {option_count} options'
         )))
-    elif world_name == 'terrain_demo':
-        actions.append(LogInfo(msg='terrain_demo: could not patch human_heat1 pose in world file; using default pose'))
+    elif randomized_world:
+        actions.append(LogInfo(msg=f'{world_name}: could not patch human_heat1 pose in world file; using default pose'))
     return actions
 
 
@@ -388,7 +399,8 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument(
         'human_pose',
         default_value='random',
-        description='terrain_demo casualty spawn: random, or 0-5 to repeat a scenario',
+        description='terrain_demo casualty spawn: random, or 0-5 to repeat a scenario, '
+                    '6 = on the rock, unreachable by ground (test)',
     ))
 
     ld.add_action(DeclareLaunchArgument(
@@ -401,7 +413,7 @@ def generate_launch_description():
         'world',
         default_value='simple_trees',
         description='Which world to load',
-        choices=['simple_trees', 'large_demo', 'terrain_demo'],
+        choices=['simple_trees', 'large_demo', 'terrain_demo', 'demo_2'],
     )
     ld.add_action(world_launch_arg)
 

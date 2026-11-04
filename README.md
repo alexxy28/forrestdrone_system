@@ -61,6 +61,8 @@ Common variations:
 
 ```bash
 ./run_simulation.sh --trace --pose 1               # fixed casualty position (0-5); default is random
+./run_simulation.sh --trace --world demo_2         # demo 2: pine trees and grass, same mission
+./run_simulation.sh --trace --pose 6               # casualty on the rock: unreachable test
 ./run_simulation.sh --trace --preload-map          # start from the saved terrain map
 ./run_simulation.sh --trace --no-gui --no-rviz     # lighter: no Gazebo window, no RViz
 ./run_simulation.sh --trace --no-build             # skip colcon build
@@ -222,6 +224,27 @@ ros2_simulation/src/
   are conservative: it rates pose 2 unreachable, but the Husky reached it in Gazebo.
 - **Detector calibration:** `tools/thermal_shape_sweep.py`.
 - **Husky parking on slopes:** `tools/husky_park_test.py`.
+- **Unreachable casualty:** `./run_simulation.sh --trace --pose 6` puts the person on top of
+  the 10.6 m rock north of the start (walls 45-80 deg; the Husky's limit is 25 deg).
+  Expected: one terrain survey, then mission FAILED "unreachable by ground". The Husky is
+  never sent, the drone keeps watch over the person, and the dashboard says why.
+- **Whole mission on the real terrain, without Gazebo:** `tools/terrain_mission_test.py`
+  runs poses 0-6 against the terrain_1 heights with a fake drone and Husky, and prints a
+  pass/fail table. Offline the exact heights close the crease on the way to pose 2, so pose
+  2 fails there (same as `terrain_reachability.py`), although the Husky reaches it in Gazebo.
+- **Results summary:** `python3 tools/summarise_results.py` turns `~/trace_results/results.csv`
+  into tables per condition (`summary.md`) and a chart of search times (`summary.png`). Each
+  row records the world, the drone setup, which drone found the person and the outcome.
+
+### Test matrix
+
+| Test | Question | Run | Pass |
+|---|---|---|---|
+| T1 Baseline | Does one drone find the person, and the Husky reach them, at every reachable spot? | `--trace --pose N`, N = 0-5 | DONE, stop <= 3 m from the body, Husky still for 120 s |
+| T2 Forest | Does dense pine canopy hide the person? | T1 with `--world demo_2` | Same success; compare search time and detection error |
+| T3 Unreachable | Does the system recognise a person the Husky can't reach? | `--pose 6`, both worlds | FAILED_UNREACHABLE, Husky not sent, drone on overwatch |
+| T4 Warm animal | Is the warm animal at (-4, 4) never reported as a person? | Any run (the drone flies over it) | No detection there |
+| T5 Stop buttons | Do the robots stop and resume safely? | Stop Husky mid-route, then Start | Husky stops, resumes, mission DONE |
 
 `terrain_demo` has six casualty poses: (-15, -10), (-15, 0), (-15, 15), (12, 15),
 (12, -5) and (2.4, 12.6). Select one with `--pose 0` to `--pose 5`.
@@ -247,6 +270,8 @@ scans keep refining it.
 - **The Husky leaves as soon as any route exists.** Once it is driving, it won't switch to
   a better route found later.
 - **One casualty per mission.** To run another, restart the mission nodes.
+- **The Husky can't reach a casualty above steep ground.** It drives only where slopes are
+  <= 25 deg. The mission then ends FAILED for the operator to decide (pose 6 tests this).
 
 ## Troubleshooting
 
