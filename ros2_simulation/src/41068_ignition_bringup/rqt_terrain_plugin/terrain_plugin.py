@@ -123,6 +123,10 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._drone_target_wp: tuple[float, float] | None = None
         self._husky_path: list[tuple[float, float]] = []
         self._drone_path: list[tuple[float, float]] = []
+
+        # Second drone (/parrot2), only drawn once it publishes
+        self._drone2_pos: tuple[float, float] | None = None
+        self._drone2_path: list[tuple[float, float]] = []
         
         # Mission (TRACE) overlays
         self._mission_route: list[tuple[float, float]] = []
@@ -153,6 +157,8 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._husky_wp_sub = None
         self._drone_plan_sub = None
         self._drone_wp_sub = None
+        self._drone2_odom_sub = None
+        self._drone2_plan_sub = None
 
         # Main UI refresh loop (10 FPS)
         self._timer = QTimer(self)
@@ -233,6 +239,12 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._drone_plan_sub = self._node.create_subscription(
             Path, '/parrot1/mission/path', self._drone_plan_cb, LATCHED)
 
+        # Second drone: nothing arrives on these unless it was launched (parrot2:=true).
+        self._drone2_odom_sub = self._node.create_subscription(
+            Odometry, '/parrot2/odometry', self._drone2_odom_cb, 10)
+        self._drone2_plan_sub = self._node.create_subscription(
+            Path, '/parrot2/mission/path', self._drone2_plan_cb, LATCHED)
+
         # Mission overlays: terrain-aware A* route, confirmed casualty, state.
         for sub in self._mission_subs:
             try:
@@ -268,6 +280,12 @@ class TerrainMapWidget(QtWidgets.QWidget):
 
     def _drone_odom_cb(self, msg: Odometry) -> None:
         self._drone_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def _drone2_odom_cb(self, msg: Odometry) -> None:
+        self._drone2_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def _drone2_plan_cb(self, msg: Path) -> None:
+        self._drone2_path = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
 
     def _husky_plan_cb(self, msg: Path) -> None:
         self._husky_path = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
@@ -306,6 +324,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         if self._node is not None:
             subs = [self._subscription, self._husky_odom_sub, self._drone_odom_sub, 
                     self._husky_plan_sub, self._husky_wp_sub, self._drone_plan_sub, self._drone_wp_sub,
+                    self._drone2_odom_sub, self._drone2_plan_sub,
                     *self._mission_subs]
             for sub in subs:
                 if sub is not None:
@@ -553,6 +572,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         # Husky trajectory = Cyan, Drone trajectory = Pink
         draw_trajectory(self._husky_pos, self._husky_path, self._husky_target_wp, 'cyan')
         draw_trajectory(self._drone_pos, self._drone_path, self._drone_target_wp, 'pink')
+        draw_trajectory(self._drone2_pos, self._drone2_path, None, 'white')
 
         # Terrain-aware A* route (solid yellow) with its waypoints.
         if len(self._mission_route) >= 1:
@@ -582,6 +602,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         # Draw robot markers (Husky = Blue, Drone = Magenta)
         draw_robot_marker(self._husky_pos, 'blue')
         draw_robot_marker(self._drone_pos, 'magenta')
+        draw_robot_marker(self._drone2_pos, 'white')
 
         # ---------------------------------------------------------------------
         # TEXT OVERLAYS (Status, Stats, Legend)
@@ -629,7 +650,9 @@ class TerrainMapWidget(QtWidgets.QWidget):
             
         # Draw Legends at the bottom of the widget
         painter.drawText(8, self.height() - 26, 'yellow = A* route   orange = detection   red X = casualty')
-        painter.drawText(8, self.height() - 8, 'blue = Husky   magenta = drone')
+        painter.drawText(8, self.height() - 8,
+                         'blue = Husky   magenta = drone' +
+                         ('   white = drone 2' if self._drone2_pos is not None else ''))
         
         # Finalize drawing
         painter.end()

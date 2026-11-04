@@ -62,9 +62,20 @@ class SystemControlNode : public rclcpp::Node{
                    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
     void clickedPointCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg);
     void droneStatusCallback(const std_msgs::msg::String::SharedPtr msg);
-    void sendDronePath(const std::vector<std::pair<double, double>>& points, const std::string& reason);
+    /// drone 1 = parrot1, drone 2 = parrot2 (second_drone:=true)
+    void sendDronePath(const std::vector<std::pair<double, double>>& points, const std::string& reason,
+                       int drone = 1);
     std::vector<std::pair<double, double>> zigzag(double x0, double y0, double width,
                                                   double height, double spacing) const;
+    /// The part of the search area a drone covers: all of it with one drone,
+    /// the west half (parrot1) or east half (parrot2) with two.
+    void droneArea(int drone, double& x0, double& y0, double& width, double& height) const;
+    /// Lawnmower for search pass `pass` (1, 2, 3) over that drone's area.
+    std::vector<std::pair<double, double>> searchPath(int drone, int pass) const;
+
+    // ---- second drone (parrot2) ----
+    void drone2StatusCallback(const std_msgs::msg::String::SharedPtr msg);
+    void uiParrot2EstopCallback(const std_msgs::msg::Bool::SharedPtr msg);
 
     TerrainMap terrainMap_;
     TerrainPlanner terrainPlanner_;
@@ -93,6 +104,16 @@ class SystemControlNode : public rclcpp::Node{
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr uiHuskyEstopSub_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr huskyEstopPub_;
     void uiHuskyEstopCallback(const std_msgs::msg::Bool::SharedPtr msg);
+
+    // ---- second drone (parrot2) ----
+    bool secondDrone_{false};
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr drone2PathPub_;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr drone2StatusSub_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr parrot2EstopPub_;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr uiParrot2EstopSub_;
+    std::string drone2Status_{"UNKNOWN"};
+    bool search2Started_{false};
+    int search2Passes_{0};
 
     State state_{State::SEARCHING};
     int routeStep_;

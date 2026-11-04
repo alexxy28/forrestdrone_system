@@ -75,6 +75,14 @@ def generate_launch_description():
                     'Empty = start with a blank map',
     ))
 
+    ld.add_action(DeclareLaunchArgument(
+        'parrot2',
+        default_value='false',
+        description='Second drone: start a parrot_node for /parrot2, split the search '
+                    'area between the drones and map with both LiDARs',
+    ))
+    second_drone = ParameterValue(LaunchConfiguration('parrot2'), value_type=bool)
+
     # Before the nodes, so a bad height_map aborts the launch before anything starts.
     ld.add_action(OpaqueFunction(function=_preload_height_map))
 
@@ -82,9 +90,13 @@ def generate_launch_description():
         params = {'use_sim_time': use_sim_time}
         if name == 'system_control':
             params['auto_start'] = ParameterValue(auto_start, value_type=bool)
+            params['second_drone'] = second_drone
+        if name == 'terrain_map':
+            params['second_drone'] = second_drone
         if name == 'parrot':
             params['start_paused'] = ParameterValue(
                 LaunchConfiguration('parrot_start_paused'), value_type=bool)
+            params['multi_drone'] = second_drone
         ld.add_action(Node(
             package='control_template',
             executable=name + '_node',
@@ -94,5 +106,38 @@ def generate_launch_description():
                 "'", nodes, "' == 'all' or '", name, "' in '", nodes, "'",
             ])),
         ))
+
+    # Second drone: the same parrot_node program, renamed and pointed at the
+    # /parrot2 topics. Every topic it uses is a parameter, so no code is copied.
+    ld.add_action(Node(
+        package='control_template',
+        executable='parrot_node',
+        name='parrot2_node',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'start_paused': ParameterValue(
+                LaunchConfiguration('parrot_start_paused'), value_type=bool),
+            'multi_drone': True,
+            # ParrotNode
+            'mission_path_topic': '/parrot2/mission/path',
+            'mission_status_topic': '/parrot2/mission/status',
+            'stop_topic': '/parrot2/estop',
+            # Parrot (flight)
+            'odom_topic': '/parrot2/odometry',
+            'cmd_topic': '/parrot2/cmd_vel',
+            'scan_topic': '/parrot2/obstacle_scan',
+            'agl_cloud_topic': '/parrot2/scan/points',
+            'marker_topic': '/parrot2/obstacle_markers',
+            # ThermalCamera (detection)
+            'thermal_topic': '/parrot2/thermal_camera',
+            'depth_topic': '/parrot2/camera/depth/image',
+            'detection_odometry_topic': '/parrot2/odometry',
+        }],
+        output='screen',
+        condition=IfCondition(PythonExpression([
+            "'", LaunchConfiguration('parrot2'), "'.lower() in ['true', '1', 'yes', 'on'] and ('",
+            nodes, "' == 'all' or 'parrot' in '", nodes, "')",
+        ])),
+    ))
 
     return ld

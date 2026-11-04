@@ -385,6 +385,16 @@ def generate_launch_description():
     )
     ld.add_action(parrot_launch_arg)
 
+    # Second drone (eva-second-drone branch). Same airframe as parrot1, its own
+    # namespace /parrot2. No SLAM, Nav2 or RViz for it: parrot_node flies it
+    # directly and terrain_map_node maps with its LiDAR, so those would only
+    # cost CPU.
+    ld.add_action(DeclareLaunchArgument(
+        'parrot2',
+        default_value='False',
+        description='Also launch a second Parrot drone in namespace /parrot2',
+    ))
+
     ld.add_action(DeclareLaunchArgument(
         'human_pose',
         default_value='random',
@@ -470,6 +480,24 @@ def generate_launch_description():
         y='0.0',
         z='0.8',
         spawn_delay=6.0,
+    )
+
+    add_robot(
+        ld,
+        pkg_path=pkg_path,
+        config_path=config_path,
+        use_sim_time=use_sim_time,
+        enabled_arg='parrot2',
+        namespace='parrot2',
+        frame_prefix='parrot2_',
+        gz_model_name='parrot2',
+        xacro_parts=['urdf_parrot', 'parrot.urdf.xacro'],
+        bridge_config='gazebo_bridge_parrot2.yaml',
+        localization_config='robot_localization_parrot2.yaml',
+        x='2.0',
+        y='3.0',
+        z='0.8',
+        spawn_delay=8.0,
     )
 
     add_navigation_instance(

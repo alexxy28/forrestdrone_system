@@ -109,6 +109,19 @@ SystemControlNode::SystemControlNode()
         topics::UI_HUSKY_ESTOP, 10,
         std::bind(&SystemControlNode::uiHuskyEstopCallback, this, std::placeholders::_1));
 
+    // ---- second drone (parrot2): its own path, status and stop topics ----
+    secondDrone_ = declare_parameter<bool>("second_drone", false);
+    if (secondDrone_) {
+        drone2PathPub_ = create_publisher<nav_msgs::msg::Path>(topics::PARROT2_MISSION_PATH, latched);
+        drone2StatusSub_ = create_subscription<std_msgs::msg::String>(
+            topics::PARROT2_MISSION_STATUS, latched,
+            std::bind(&SystemControlNode::drone2StatusCallback, this, std::placeholders::_1));
+        parrot2EstopPub_ = create_publisher<std_msgs::msg::Bool>(topics::PARROT2_ESTOP, 10);
+        uiParrot2EstopSub_ = create_subscription<std_msgs::msg::Bool>(
+            topics::UI_PARROT2_ESTOP, 10,
+            std::bind(&SystemControlNode::uiParrot2EstopCallback, this, std::placeholders::_1));
+    }
+
     startSrv_ = create_service<std_srvs::srv::Trigger>(
         "/mission/start",
         std::bind(&SystemControlNode::startSearch, this, std::placeholders::_1, std::placeholders::_2));
@@ -131,6 +144,11 @@ SystemControlNode::SystemControlNode()
                 areaX0_, areaX0_ + areaWidth_, areaY0_, areaY0_ + areaHeight_,
                 get_parameter("terrain_size_x").as_double(),
                 get_parameter("terrain_size_y").as_double());
+    if (secondDrone_) {
+        RCLCPP_INFO(get_logger(),
+                    "Second drone ON: parrot1 searches x %.1f..%.1f, parrot2 searches x %.1f..%.1f",
+                    areaX0_, areaX0_ + areaWidth_ / 2.0, areaX0_ + areaWidth_ / 2.0, areaX0_ + areaWidth_);
+    }
 }
 
 void SystemControlNode::terrainCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
@@ -415,8 +433,38 @@ std::vector<std::pair<double, double>> SystemControlNode::zigzagAlongY(double x0
     return pts;
 }
 
+void SystemControlNode::droneArea(int drone, double& x0, double& y0, double& width, double& height) const
+{
+    x0 = areaX0_;
+    y0 = areaY0_;
+    width = areaWidth_;
+    height = areaHeight_;
+    if (secondDrone_) {
+        width = areaWidth_ / 2.0;          // parrot1: west half
+        if (drone == 2) {
+            x0 = areaX0_ + width;          // parrot2: east half
+        }
+    }
+}
+
+// Pass 1: east-west lanes. Pass 2: north-south lanes. Pass 3: east-west, offset
+// by half a lane. (Same passes as before, now over each drone's own area.)
+std::vector<std::pair<double, double>> SystemControlNode::searchPath(int drone, int pass) const
+{
+    double x0, y0, width, height;
+    droneArea(drone, x0, y0, width, height);
+    if (pass <= 1) {
+        return zigzag(x0, y0, width, height, laneSpacing_);
+    }
+    const bool alongY = pass % 2 == 0;
+    const double shift = (pass >= 3) ? laneSpacing_ / 2.0 : 0.0;
+    return alongY
+        ? zigzagAlongY(x0 + shift, y0, width - shift, height, laneSpacing_)
+        : zigzag(x0, y0 + shift, width, height - shift, laneSpacing_);
+}
+
 void SystemControlNode::sendDronePath(const std::vector<std::pair<double, double>>& points,
-                                      const std::string& reason)
+                                      const std::string& reason, int drone)
 {
     nav_msgs::msg::Path path;
     path.header.frame_id = missionFrame_;
@@ -428,6 +476,14 @@ void SystemControlNode::sendDronePath(const std::vector<std::pair<double, double
         pose.pose.position.y = p.second;
         pose.pose.orientation.w = 1.0;
         path.poses.push_back(pose);
+    }
+    if (drone == 2) {
+        if (!drone2PathPub_) {
+            return;   // second drone not enabled
+        }
+        drone2PathPub_->publish(path);
+        RCLCPP_INFO(get_logger(), "Drone 2 tasked: %s (%zu waypoints)", reason.c_str(), points.size());
+        return;
     }
     dronePathPub_->publish(path);
     RCLCPP_INFO(get_logger(), "Drone tasked: %s (%zu waypoints)", reason.c_str(), points.size());
@@ -442,20 +498,28 @@ void SystemControlNode::startSearch(const std::shared_ptr<std_srvs::srv::Trigger
                             toString(static_cast<int>(state_)) + ")";
         return;
     }
-    auto points = zigzag(areaX0_, areaY0_, areaWidth_, areaHeight_, laneSpacing_);
+    auto points = searchPath(1, 1);
     sendDronePath(points, "area search");
     searchStarted_ = true;
     searchPasses_ = 1;
     response->success = true;
     response->message = "Search started: " + std::to_string(points.size()) + " waypoints";
+    if (secondDrone_) {
+        const auto points2 = searchPath(2, 1);
+        sendDronePath(points2, "area search (east half)", 2);
+        search2Started_ = true;
+        search2Passes_ = 1;
+        response->message += " (drone 1), " + std::to_string(points2.size()) + " waypoints (drone 2)";
+    }
 }
 
 void SystemControlNode::stopDrone(const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
                                   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
     sendDronePath({}, "stop and hover");
+    sendDronePath({}, "stop and hover", 2);   // does nothing without a second drone
     response->success = true;
-    response->message = "Drone stopping";
+    response->message = secondDrone_ ? "Both drones stopping" : "Drone stopping";
 }
 
 void SystemControlNode::clickedPointCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg)
@@ -491,10 +555,7 @@ void SystemControlNode::droneStatusCallback(const std_msgs::msg::String::SharedP
         searchPasses_ < MAX_SEARCH_PASSES) {
         ++searchPasses_;
         const bool alongY = searchPasses_ % 2 == 0;
-        const double shift = (searchPasses_ >= 3) ? laneSpacing_ / 2.0 : 0.0;
-        auto points = alongY
-            ? zigzagAlongY(areaX0_ + shift, areaY0_, areaWidth_ - shift, areaHeight_, laneSpacing_)
-            : zigzag(areaX0_, areaY0_ + shift, areaWidth_, areaHeight_ - shift, laneSpacing_);
+        auto points = searchPath(1, searchPasses_);
         sendDronePath(points, "search pass " + std::to_string(searchPasses_) +
                                   (alongY ? " (north-south lanes)" : " (east-west lanes, offset)"));
         droneStatus_ = "TASKED";
@@ -509,8 +570,7 @@ void SystemControlNode::droneStatusCallback(const std_msgs::msg::String::SharedP
     // auto_start: begin the area search as soon as the drone has climbed and
     // is waiting for a mission, so the demo needs no manual service call.
     if (autoStart_ && !searchStarted_ && droneStatus_ == "IDLE" && state_ == State::SEARCHING) {
-        sendDronePath(zigzag(areaX0_, areaY0_, areaWidth_, areaHeight_, laneSpacing_),
-                      "area search (auto_start)");
+        sendDronePath(searchPath(1, 1), "area search (auto_start)");
         searchStarted_ = true;
         searchPasses_ = 1;
     }
@@ -532,7 +592,52 @@ void SystemControlNode::uiParrotEstopCallback(const std_msgs::msg::Bool::SharedP
     std_msgs::msg::Bool out;
     out.data = msg->data;
     parrotEstopPub_->publish(out);
-    RCLCPP_INFO(get_logger(), "UI: parrot %s", msg->data ? "STOP" : "START");
+    // The dashboard has one Stop/Start Parrot button: it drives both drones.
+    if (parrot2EstopPub_) {
+        parrot2EstopPub_->publish(out);
+    }
+    RCLCPP_INFO(get_logger(), "UI: parrot %s%s", msg->data ? "STOP" : "START",
+                parrot2EstopPub_ ? " (both drones)" : "");
+}
+
+// Stop/start parrot2 on its own:
+//   ros2 topic pub --once /mission_control/parrot2/estop std_msgs/msg/Bool "{data: true}"
+void SystemControlNode::uiParrot2EstopCallback(const std_msgs::msg::Bool::SharedPtr msg)
+{
+    std_msgs::msg::Bool out;
+    out.data = msg->data;
+    parrot2EstopPub_->publish(out);
+    RCLCPP_INFO(get_logger(), "UI: parrot2 %s", msg->data ? "STOP" : "START");
+}
+
+// Same search logic as droneStatusCallback, for parrot2 over the east half.
+// Surveys for the Husky route and the overwatch stay with parrot1.
+void SystemControlNode::drone2StatusCallback(const std_msgs::msg::String::SharedPtr msg)
+{
+    if (msg->data == drone2Status_) {
+        return;
+    }
+    drone2Status_ = msg->data;
+    RCLCPP_INFO(get_logger(), "Drone 2: %s", drone2Status_.c_str());
+
+    // Finished a pass with nobody found: search its half again from another direction.
+    if (drone2Status_ == "HOLDING" && state_ == State::SEARCHING && search2Started_ &&
+        search2Passes_ < MAX_SEARCH_PASSES) {
+        ++search2Passes_;
+        const bool alongY = search2Passes_ % 2 == 0;
+        sendDronePath(searchPath(2, search2Passes_),
+                      "search pass " + std::to_string(search2Passes_) +
+                          (alongY ? " (north-south lanes)" : " (east-west lanes, offset)"),
+                      2);
+        drone2Status_ = "TASKED";
+        return;
+    }
+
+    if (autoStart_ && !search2Started_ && drone2Status_ == "IDLE" && state_ == State::SEARCHING) {
+        sendDronePath(searchPath(2, 1), "area search, east half (auto_start)", 2);
+        search2Started_ = true;
+        search2Passes_ = 1;
+    }
 }
 
 void SystemControlNode::uiHuskyEstopCallback(const std_msgs::msg::Bool::SharedPtr msg)

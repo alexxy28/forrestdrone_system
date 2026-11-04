@@ -20,6 +20,7 @@ ROS_DOMAIN=""
 TRACE="false"
 POSE=""
 PRELOAD_MAP="false"
+PARROT2="false"
 
 usage() {
   cat <<'EOF'
@@ -47,6 +48,8 @@ Options:
       --preload-map[=true|false]
                         With --trace: start from the saved terrain map for the
                         world (pre_scanned_height_maps/WORLD)
+      --second-drone    Add a second drone (/parrot2); with --trace each drone
+                        searches half the area
   -h, --help            Show this help
 
 Defaults: terrain_demo, both robots, RViz, Nav2, local-only ROS, rebuild enabled.
@@ -126,6 +129,10 @@ while (($# > 0)); do
       ;;
     --preload-map=false)
       PRELOAD_MAP="false"
+      shift
+      ;;
+    --second-drone)
+      PARROT2="true"
       shift
       ;;
     -h|--help)
@@ -210,25 +217,27 @@ MAP_ARGS=()
 [[ "$PRELOAD_MAP" == "true" ]] && MAP_ARGS=(height_map:="$WORLD")
 
 if [[ "$TRACE" == "true" ]]; then
-  echo "Starting TRACE mission: world=$WORLD rviz=$RVIZ gui=$GUI human_pose=${POSE:-random} preload_map=$PRELOAD_MAP"
+  echo "Starting TRACE mission: world=$WORLD rviz=$RVIZ gui=$GUI human_pose=${POSE:-random} preload_map=$PRELOAD_MAP second_drone=$PARROT2"
   echo "  ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}"
   # Robots, SLAM and Nav2 are fixed on inside trace_demo, so those flags are ignored here.
   exec ros2 launch 41068_ignition_bringup trace_demo.launch.py \
     world:="$WORLD" \
     rviz:="$RVIZ" \
     gui:="$GUI" \
+    parrot2:="$PARROT2" \
     "${POSE_ARGS[@]}" \
     "${MAP_ARGS[@]}"
 fi
 
 echo "Starting simulation:"
-echo "  world=$WORLD husky=$HUSKY parrot=$PARROT rviz=$RVIZ gui=$GUI nav2=$NAV2 slam=$SLAM"
+echo "  world=$WORLD husky=$HUSKY parrot=$PARROT parrot2=$PARROT2 rviz=$RVIZ gui=$GUI nav2=$NAV2 slam=$SLAM"
 echo "  ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}"
 
 exec ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
   world:="$WORLD" \
   husky:="$HUSKY" \
   parrot:="$PARROT" \
+  parrot2:="$PARROT2" \
   rviz:="$RVIZ" \
     gui:="$GUI" \
   nav2:="$NAV2" \

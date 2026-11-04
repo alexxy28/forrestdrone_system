@@ -17,6 +17,7 @@ Starts, in order:
 Useful arguments: world:=terrain_demo rviz:=true rqt:=true auto_start:=true gui:=true
                   control_delay:=20.0 human_pose:=0..5 log_results:=true
                   hold_check_s:=120 parrot_start_paused:=true
+                  parrot2:=true  (second drone: each drone searches half the area)
 """
 
 from launch import LaunchDescription
@@ -50,6 +51,9 @@ def generate_launch_description():
         DeclareLaunchArgument('parrot_start_paused', default_value='true',
                               description='Drone waits on the ground until Start Parrot '
                                           'is pressed on the dashboard'),
+        DeclareLaunchArgument('parrot2', default_value='false',
+                              description='Add a second drone (/parrot2). The search area '
+                                          'is split in half between the two drones'),
         DeclareLaunchArgument('control_delay', default_value='20.0',
                               description='Seconds to wait for Gazebo/Nav2 before the mission nodes'),
         DeclareLaunchArgument('hold_check_s', default_value='120.0',
@@ -66,6 +70,7 @@ def generate_launch_description():
             'world': LaunchConfiguration('world'),
             'husky': 'true',
             'parrot': 'true',
+            'parrot2': LaunchConfiguration('parrot2'),
             'slam': 'true',
             'nav2': 'true',          # Husky Nav2 only; parrot_nav2 defaults to false
             'rviz': LaunchConfiguration('rviz'),
@@ -81,6 +86,7 @@ def generate_launch_description():
             launch_arguments={
                 'auto_start': LaunchConfiguration('auto_start'),
                 'parrot_start_paused': LaunchConfiguration('parrot_start_paused'),
+                'parrot2': LaunchConfiguration('parrot2'),
             }.items(),
         )],
     )

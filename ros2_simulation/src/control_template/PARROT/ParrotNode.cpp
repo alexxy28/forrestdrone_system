@@ -81,6 +81,16 @@ stopSub_ = create_subscription<std_msgs::msg::Bool>(
     stopTopic, 10,
     std::bind(&ParrotNode::onStop, this, std::placeholders::_1));
 
+// More than one drone: listen to the shared detection topic, so this drone
+// knows when another drone is waiting for the operator to confirm or reject.
+multiDrone_ = declare_parameter<bool>("multi_drone", false);
+if (multiDrone_) {
+    candidateSub_ = create_subscription<geometry_msgs::msg::PointStamped>(
+        topics::CASUALTY_CANDIDATE, latched,
+        std::bind(&ParrotNode::onCandidate, this, std::placeholders::_1));
+    RCLCPP_INFO(get_logger(), "multi_drone: sharing the operator review with the other drone(s)");
+}
+
 timer_ = create_wall_timer(std::chrono::milliseconds(100), std::bind(&ParrotNode::tick, this));
 
 RCLCPP_INFO(get_logger(), "parrot_node started, waiting for missions on %s", pathTopic.c_str());
@@ -172,7 +182,20 @@ void ParrotNode::onCasualtyConfirmed(const std_msgs::msg::Bool::SharedPtr msg)
  * Otherwise, it updates the internal state with the received confirmation.
  */
 {
-    if (!awaitingCasualtyConfirmation_) { 
+    if (multiDrone_) {
+        // The answer is for whichever detection the dashboard was showing.
+        // If that was another drone's, this one carries on as before. (If two
+        // drones asked at the same instant, both are awaiting and both take
+        // the answer: in practice they have seen the same person.)
+        const bool forAnotherDrone = otherReviewPending_ || !lastCandidateWasMine_;
+        otherReviewPending_ = false;
+        if (forAnotherDrone && !awaitingCasualtyConfirmation_) {
+            RCLCPP_INFO(get_logger(), "Operator answered another drone's detection: ignoring it here");
+            return;
+        }
+    }
+
+    if (!awaitingCasualtyConfirmation_) {
         if (!msg->data || !lastReviewedCasualtyIndex_) {
             return; // No confirmation or no last reviewed casualty index, nothing to do
         }
@@ -303,13 +326,15 @@ if (!casualtyConfirmed_) {
 }
 }
 
-if (!verifyTarget_) {
+// multi_drone: while another drone's detection is on the dashboard, keep
+// searching and ask about our own detections once the operator has answered.
+if (!verifyTarget_ && !(multiDrone_ && otherReviewPending_)) {
 if (const auto casualty = selectCasualtyForVerification()) {
 pendingCasualtyIndex_ = casualty->index;
 awaitingCasualtyConfirmation_ = true;
 casualtyConfirmationReceived_ = false;
 casualtyConfirmed_ = false;
-casualtyCandidatePub_->publish(casualty->position);   // shown on the dashboard before review
+publishCandidate(*casualty);   // shown on the dashboard before review
 std_msgs::msg::Bool discovered;
 discovered.data = true;
 casualtyDiscoveredPub_->publish(discovered);
@@ -388,6 +413,29 @@ return;
     }
 setState(State::SEARCHING);
 parrot_.flyToWaypoint();
+}
+
+void ParrotNode::publishCandidate(const Casualty& casualty)
+{
+    myLastCandidate_ = std::make_pair(casualty.position.point.x, casualty.position.point.y);
+    lastCandidateWasMine_ = true;
+    casualtyCandidatePub_->publish(casualty.position);
+}
+
+// multi_drone only: a detection was put up for review on the shared topic.
+void ParrotNode::onCandidate(const geometry_msgs::msg::PointStamped::SharedPtr msg)
+{
+    // Our own detection comes back to us as well: same position, nothing to do.
+    if (myLastCandidate_ &&
+        std::hypot(msg->point.x - myLastCandidate_->first,
+                   msg->point.y - myLastCandidate_->second) < 1e-3) {
+        return;
+    }
+    lastCandidateWasMine_ = false;
+    otherReviewPending_ = true;
+    RCLCPP_INFO(get_logger(),
+                "Another drone is waiting for review at (%.2f, %.2f): holding back my own "
+                "detections until the operator answers", msg->point.x, msg->point.y);
 }
 
 void ParrotNode::setState(State state)
