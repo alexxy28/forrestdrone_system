@@ -98,6 +98,7 @@ def generate_launch_description():
         period=LaunchConfiguration('control_delay'),
         actions=[IncludeLaunchDescription(
             launch_file('41068_rqt_dashboard.launch.py'),
+            launch_arguments={'parrot2': LaunchConfiguration('parrot2')}.items(),
             condition=IfCondition(LaunchConfiguration('rqt')),
         )],
     )

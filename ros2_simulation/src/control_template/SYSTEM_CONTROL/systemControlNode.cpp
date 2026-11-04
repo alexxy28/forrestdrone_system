@@ -680,7 +680,11 @@ void SystemControlNode::droneStatusCallback(const std_msgs::msg::String::SharedP
 
     // auto_start: begin the area search as soon as the drone has climbed and
     // is waiting for a mission, so the demo needs no manual service call.
-    if (autoStart_ && !searchStarted_ && droneStatus_ == "IDLE" && state_ == State::SEARCHING) {
+    // Two drones: on its first status instead (the path is latched and kept).
+    // A drone that spots someone while taking off stops to ask before it is
+    // ever IDLE, and would otherwise only move once the operator answered.
+    if (autoStart_ && !searchStarted_ && (droneStatus_ == "IDLE" || secondDrone_) &&
+        state_ == State::SEARCHING) {
         sendDronePath(searchPath(1, 1), "area search (auto_start)");
         searchStarted_ = true;
         searchPasses_ = 1;
@@ -744,7 +748,8 @@ void SystemControlNode::drone2StatusCallback(const std_msgs::msg::String::Shared
         surveyForRoute();
     }
 
-    if (autoStart_ && !search2Started_ && drone2Status_ == "IDLE" && state_ == State::SEARCHING) {
+    // On its first status, like drone 1 with two drones (see droneStatusCallback).
+    if (autoStart_ && !search2Started_ && state_ == State::SEARCHING) {
         sendDronePath(searchPath(2, 1),
                       raceSearch_ ? "area search (auto_start)" : "area search, east half (auto_start)", 2);
         search2Started_ = true;

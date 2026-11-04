@@ -29,7 +29,7 @@ _TERRAIN_DEMO_HUMAN_POSES = [
     '-15 -10 1 -1.7 0 0',
     '-15 0 0 -1.25 0 0',
     '-15 15 0 -1.5 0 0',
-    '12 15 1.4 -1.5 0 0',
+    '12 15 0.3 -1.5 0 0',    # was z 1.4: 1.2 m above the ground (terrain is 0.21 m here), the person floated
     '12 -5 0.75 -1.7 0 0',
     '2.3978 12.5679 0.4785 -1.7 0 0',
 ]
@@ -494,8 +494,13 @@ def generate_launch_description():
         xacro_parts=['urdf_parrot', 'parrot.urdf.xacro'],
         bridge_config='gazebo_bridge_parrot2.yaml',
         localization_config='robot_localization_parrot2.yaml',
-        x='2.0',
-        y='3.0',
+        # Flat ground (0.10 m) beside the Husky, 4.4 m from the nearest tree
+        # (trees push a drone away inside 4 m). The first spot, (2, 3), was on
+        # a slope (0.33 m) with a tree 2.5 m away: parked drones sink while
+        # waiting for Start, so parrot2 ended up in the hill, then was pushed
+        # around by the tree.
+        x='0.0',
+        y='2.0',
         z='0.8',
         spawn_delay=8.0,
     )

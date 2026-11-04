@@ -65,7 +65,15 @@ public:
                 [this](nav_msgs::msg::Odometry::SharedPtr msg) { odom2_ = msg; });
             scan2Sub_ = create_subscription<PointCloud2>(
                 topics::PARROT2_SCAN, rclcpp::SensorDataQoS(),
-                [this](const PointCloud2::SharedPtr msg) { addScan(*msg, odom2_, "parrot2_odom", "parrot2_"); });
+                [this](const PointCloud2::SharedPtr msg) {
+                    // Only once parrot2 is up flying: parked on the ground it sinks
+                    // into the terrain, and its LiDAR then reports heights that
+                    // aren't there (rings of fake slopes around it on the map).
+                    if (!odom2_ || odom2_->pose.pose.position.z < SECOND_DRONE_MIN_MAP_Z_M) {
+                        return;
+                    }
+                    addScan(*msg, odom2_, "parrot2_odom", "parrot2_");
+                });
             RCLCPP_INFO(get_logger(), "Second drone: also mapping %s + %s",
                         topics::PARROT2_SCAN, topics::PARROT2_ODOM);
         }
@@ -241,6 +249,7 @@ private:
 
     nav_msgs::msg::Odometry::SharedPtr odom_;
     // second drone
+    static constexpr double SECOND_DRONE_MIN_MAP_Z_M = 2.0;   // flies at target_altitude above ground
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom2Sub_;
     rclcpp::Subscription<PointCloud2>::SharedPtr scan2Sub_;
     nav_msgs::msg::Odometry::SharedPtr odom2_;
