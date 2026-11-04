@@ -82,6 +82,12 @@ def generate_launch_description():
                     'area between the drones and map with both LiDARs',
     ))
     second_drone = ParameterValue(LaunchConfiguration('parrot2'), value_type=bool)
+    ld.add_action(DeclareLaunchArgument(
+        'drone_search',
+        default_value='race',
+        description='With parrot2: race = both drones search the whole area on different paths, '
+                    'split = each drone searches half',
+    ))
 
     # Before the nodes, so a bad height_map aborts the launch before anything starts.
     ld.add_action(OpaqueFunction(function=_preload_height_map))
@@ -91,6 +97,7 @@ def generate_launch_description():
         if name == 'system_control':
             params['auto_start'] = ParameterValue(auto_start, value_type=bool)
             params['second_drone'] = second_drone
+            params['drone_search'] = LaunchConfiguration('drone_search')
         if name == 'terrain_map':
             params['second_drone'] = second_drone
         if name == 'parrot':

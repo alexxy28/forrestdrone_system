@@ -64,8 +64,16 @@ Common variations:
 ./run_simulation.sh --trace --preload-map          # start from the saved terrain map
 ./run_simulation.sh --trace --no-gui --no-rviz     # lighter: no Gazebo window, no RViz
 ./run_simulation.sh --trace --no-build             # skip colcon build
+./run_simulation.sh --trace --second-drone         # two drones race to find the casualty
+./run_simulation.sh --trace --second-drone --split-search   # two drones, half the area each
 ./run_simulation.sh --help                         # all options
 ```
+
+With `--second-drone` a second Parrot (`/parrot2`) joins the search. Press **Start both drones**
+on the dashboard to launch them together; each drone also has its own Stop/Start button. Both
+search the whole area on different paths, and whichever finds the casualty first asks for
+review (one review at a time). The finder then stays over the casualty, the other drone maps
+the Husky's route and follows the Husky in, and both end up holding at the casualty.
 
 The full TRACE mission is the default; `--trace` can also select it explicitly.
 With `--sim-only`, the script starts only the simulator and the robots, with Nav2 and

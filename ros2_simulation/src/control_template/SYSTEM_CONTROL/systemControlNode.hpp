@@ -64,18 +64,23 @@ class SystemControlNode : public rclcpp::Node{
     void droneStatusCallback(const std_msgs::msg::String::SharedPtr msg);
     /// drone 1 = parrot1, drone 2 = parrot2 (second_drone:=true)
     void sendDronePath(const std::vector<std::pair<double, double>>& points, const std::string& reason,
-                       int drone = 1);
+                       int drone = 1, bool log = true);
     std::vector<std::pair<double, double>> zigzag(double x0, double y0, double width,
                                                   double height, double spacing) const;
-    /// The part of the search area a drone covers: all of it with one drone,
-    /// the west half (parrot1) or east half (parrot2) with two.
+    /// The part of the search area a drone covers: all of it with one drone or
+    /// in a race, the west half (parrot1) or east half (parrot2) in a split.
     void droneArea(int drone, double& x0, double& y0, double& width, double& height) const;
     /// Lawnmower for search pass `pass` (1, 2, 3) over that drone's area.
     std::vector<std::pair<double, double>> searchPath(int drone, int pass) const;
+    /// 1 east-west, 2 north-south, 3 east-west offset, 4 north-south offset.
+    int searchPattern(int drone, int pass) const;
+    std::string searchPassName(int drone, int pass) const;
 
     // ---- second drone (parrot2) ----
     void drone2StatusCallback(const std_msgs::msg::String::SharedPtr msg);
     void uiParrot2EstopCallback(const std_msgs::msg::Bool::SharedPtr msg);
+    /// HUSKY_EN_ROUTE with two drones: the helper flies behind the Husky.
+    void followHusky();
 
     TerrainMap terrainMap_;
     TerrainPlanner terrainPlanner_;
@@ -107,6 +112,9 @@ class SystemControlNode : public rclcpp::Node{
 
     // ---- second drone (parrot2) ----
     bool secondDrone_{false};
+    // drone_search: "race" = both drones search the whole area on different
+    // paths (first to find the casualty wins), "split" = each searches half.
+    bool raceSearch_{true};
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr drone2PathPub_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr drone2StatusSub_;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr parrot2EstopPub_;
@@ -119,6 +127,12 @@ class SystemControlNode : public rclcpp::Node{
     int finderDrone_{1};
     bool surveyInProgress_{false};
     int helperDrone() const { return finderDrone_ == 1 ? 2 : 1; }
+    // Last point sent to the helper while it follows the Husky.
+    bool escortSent_{false};
+    double escortX_{0.0};
+    double escortY_{0.0};
+    static constexpr double ESCORT_BEHIND_M = 4.0;     // behind the Husky, camera on it
+    static constexpr double ESCORT_UPDATE_M = 1.5;     // re-task once the Husky has moved this far
 
     State state_{State::SEARCHING};
     int routeStep_;

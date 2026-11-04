@@ -111,6 +111,11 @@ SystemControlNode::SystemControlNode()
 
     // ---- second drone (parrot2): its own path, status and stop topics ----
     secondDrone_ = declare_parameter<bool>("second_drone", false);
+    const std::string droneSearch = declare_parameter<std::string>("drone_search", "race");
+    if (droneSearch != "race" && droneSearch != "split") {
+        RCLCPP_WARN(get_logger(), "drone_search '%s' is not race or split: using race", droneSearch.c_str());
+    }
+    raceSearch_ = droneSearch != "split";
     if (secondDrone_) {
         drone2PathPub_ = create_publisher<nav_msgs::msg::Path>(topics::PARROT2_MISSION_PATH, latched);
         drone2StatusSub_ = create_subscription<std_msgs::msg::String>(
@@ -144,9 +149,12 @@ SystemControlNode::SystemControlNode()
                 areaX0_, areaX0_ + areaWidth_, areaY0_, areaY0_ + areaHeight_,
                 get_parameter("terrain_size_x").as_double(),
                 get_parameter("terrain_size_y").as_double());
-    if (secondDrone_) {
+    if (secondDrone_ && raceSearch_) {
+        RCLCPP_INFO(get_logger(), "Second drone ON, race: both drones search the whole area, parrot1 "
+                    "from the south-west, parrot2 from the north-east on the rows in between");
+    } else if (secondDrone_) {
         RCLCPP_INFO(get_logger(),
-                    "Second drone ON: parrot1 searches x %.1f..%.1f, parrot2 searches x %.1f..%.1f",
+                    "Second drone ON, split: parrot1 searches x %.1f..%.1f, parrot2 searches x %.1f..%.1f",
                     areaX0_, areaX0_ + areaWidth_ / 2.0, areaX0_ + areaWidth_ / 2.0, areaX0_ + areaWidth_);
     }
 }
@@ -275,7 +283,42 @@ void SystemControlNode::sendOverwatch()
     sendDronePath({{casualtyX_ + ux * (OVERWATCH_OFFSET_M + 4.0), casualtyY_ + uy * (OVERWATCH_OFFSET_M + 4.0)},
                    {casualtyX_ + ux * OVERWATCH_OFFSET_M, casualtyY_ + uy * OVERWATCH_OFFSET_M}},
                   "overwatch near the casualty (mission DONE)", secondDrone_ ? finderDrone_ : 1);
+    if (secondDrone_) {
+        // The other drone (it followed the Husky in) holds on the far side,
+        // also facing the casualty: both cameras on the scene.
+        sendDronePath({{casualtyX_ - ux * (OVERWATCH_OFFSET_M + 4.0), casualtyY_ - uy * (OVERWATCH_OFFSET_M + 4.0)},
+                       {casualtyX_ - ux * OVERWATCH_OFFSET_M, casualtyY_ - uy * OVERWATCH_OFFSET_M}},
+                      "overwatch, far side of the casualty (mission DONE)", helperDrone());
+    }
     overwatchSent_ = true;
+}
+
+// Two drones, Husky driving: the helper flies behind it, on the line from the
+// casualty, so it faces the way the Husky drives and its camera has the Husky
+// in view. Re-tasked each time the Husky has moved ESCORT_UPDATE_M (only the
+// first one is logged, the rest would flood the log every second).
+void SystemControlNode::followHusky()
+{
+    if (!secondDrone_ || state_ != State::HUSKY_EN_ROUTE || !huskyOdomReceived_) {
+        return;
+    }
+    double ux = huskyX_ - casualtyX_;
+    double uy = huskyY_ - casualtyY_;
+    const double n = std::hypot(ux, uy);
+    if (n < 1e-3) {
+        return;
+    }
+    ux /= n;
+    uy /= n;
+    const double x = huskyX_ + ux * ESCORT_BEHIND_M;
+    const double y = huskyY_ + uy * ESCORT_BEHIND_M;
+    if (escortSent_ && std::hypot(x - escortX_, y - escortY_) < ESCORT_UPDATE_M) {
+        return;
+    }
+    sendDronePath({{x, y}}, "follow the Husky to the casualty", helperDrone(), !escortSent_);
+    escortSent_ = true;
+    escortX_ = x;
+    escortY_ = y;
 }
 
 // Warn the operator when a link goes quiet, instead of waiting silently.
@@ -310,6 +353,7 @@ void SystemControlNode::watchdog()
 void SystemControlNode::tryPlan()
 {
     watchdog();
+    followHusky();
     if (state_ != State::PLANNING) {
         return;
     }
@@ -350,6 +394,14 @@ void SystemControlNode::tryPlan()
     routeStartDist_ = std::hypot(huskyX_ - casualtyX_, huskyY_ - casualtyY_);
     huskyAcked_ = false;
     setState(State::HUSKY_EN_ROUTE);
+
+    if (secondDrone_) {
+        surveyInProgress_ = false;   // the route is known: the rest of the survey is not needed
+        escortSent_ = false;
+        RCLCPP_INFO(get_logger(), "Drone %d follows the Husky to the casualty, drone %d keeps watch over it",
+                    helperDrone(), finderDrone_);
+        followHusky();
+    }
 }
 
 // Decision: the planner needs terrain the map doesn't have yet, so task the
@@ -462,7 +514,7 @@ void SystemControlNode::droneArea(int drone, double& x0, double& y0, double& wid
     y0 = areaY0_;
     width = areaWidth_;
     height = areaHeight_;
-    if (secondDrone_) {
+    if (secondDrone_ && !raceSearch_) {
         width = areaWidth_ / 2.0;          // parrot1: west half
         if (drone == 2) {
             x0 = areaX0_ + width;          // parrot2: east half
@@ -472,19 +524,40 @@ void SystemControlNode::droneArea(int drone, double& x0, double& y0, double& wid
 
 // Pass 1: east-west lanes. Pass 2: north-south lanes. Pass 3: east-west, offset
 // by half a lane. (Same passes as before, now over each drone's own area.)
-// With two drones, parrot2 flies its lawnmower backwards: it starts in the far
-// (north-east) corner and works south while parrot1 works north from the
-// south-west, so they spread out instead of flying side by side.
+// With two drones, parrot2 flies its lawnmower backwards, from the far
+// (north-east) corner, so the drones spread out instead of flying side by
+// side. In a race both cover the whole area, so parrot2 also flies the lanes
+// in between parrot1's: pass 1 is east-west rows for both (the Z pattern),
+// parrot2's offset by half a lane; then north-south offset, then east-west.
+int SystemControlNode::searchPattern(int drone, int pass) const
+{
+    static constexpr int RACE_PATTERN_DRONE2[] = {3, 4, 1};   // for passes 1, 2, 3
+    return (secondDrone_ && raceSearch_ && drone == 2)
+        ? RACE_PATTERN_DRONE2[std::clamp(pass, 1, 3) - 1]
+        : pass;
+}
+
+std::string SystemControlNode::searchPassName(int drone, int pass) const
+{
+    const int pattern = searchPattern(drone, pass);
+    std::string name = pattern % 2 == 0 ? "north-south lanes" : "east-west lanes";
+    if (pattern >= 3) {
+        name += ", offset";
+    }
+    return "search pass " + std::to_string(pass) + " (" + name + ")";
+}
+
 std::vector<std::pair<double, double>> SystemControlNode::searchPath(int drone, int pass) const
 {
     double x0, y0, width, height;
     droneArea(drone, x0, y0, width, height);
+    const int pattern = searchPattern(drone, pass);
     std::vector<std::pair<double, double>> points;
-    if (pass <= 1) {
+    if (pattern <= 1) {
         points = zigzag(x0, y0, width, height, laneSpacing_);
     } else {
-        const bool alongY = pass % 2 == 0;
-        const double shift = (pass >= 3) ? laneSpacing_ / 2.0 : 0.0;
+        const bool alongY = pattern % 2 == 0;
+        const double shift = (pattern >= 3) ? laneSpacing_ / 2.0 : 0.0;
         points = alongY
             ? zigzagAlongY(x0 + shift, y0, width - shift, height, laneSpacing_)
             : zigzag(x0, y0 + shift, width, height - shift, laneSpacing_);
@@ -496,7 +569,7 @@ std::vector<std::pair<double, double>> SystemControlNode::searchPath(int drone, 
 }
 
 void SystemControlNode::sendDronePath(const std::vector<std::pair<double, double>>& points,
-                                      const std::string& reason, int drone)
+                                      const std::string& reason, int drone, bool log)
 {
     nav_msgs::msg::Path path;
     path.header.frame_id = missionFrame_;
@@ -514,11 +587,15 @@ void SystemControlNode::sendDronePath(const std::vector<std::pair<double, double
             return;   // second drone not enabled
         }
         drone2PathPub_->publish(path);
-        RCLCPP_INFO(get_logger(), "Drone 2 tasked: %s (%zu waypoints)", reason.c_str(), points.size());
+        if (log) {
+            RCLCPP_INFO(get_logger(), "Drone 2 tasked: %s (%zu waypoints)", reason.c_str(), points.size());
+        }
         return;
     }
     dronePathPub_->publish(path);
-    RCLCPP_INFO(get_logger(), "Drone tasked: %s (%zu waypoints)", reason.c_str(), points.size());
+    if (log) {
+        RCLCPP_INFO(get_logger(), "Drone tasked: %s (%zu waypoints)", reason.c_str(), points.size());
+    }
 }
 
 void SystemControlNode::startSearch(const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
@@ -538,7 +615,7 @@ void SystemControlNode::startSearch(const std::shared_ptr<std_srvs::srv::Trigger
     response->message = "Search started: " + std::to_string(points.size()) + " waypoints";
     if (secondDrone_) {
         const auto points2 = searchPath(2, 1);
-        sendDronePath(points2, "area search (east half)", 2);
+        sendDronePath(points2, raceSearch_ ? "area search" : "area search (east half)", 2);
         search2Started_ = true;
         search2Passes_ = 1;
         response->message += " (drone 1), " + std::to_string(points2.size()) + " waypoints (drone 2)";
@@ -586,10 +663,7 @@ void SystemControlNode::droneStatusCallback(const std_msgs::msg::String::SharedP
     if (droneStatus_ == "HOLDING" && state_ == State::SEARCHING && searchStarted_ &&
         searchPasses_ < MAX_SEARCH_PASSES) {
         ++searchPasses_;
-        const bool alongY = searchPasses_ % 2 == 0;
-        auto points = searchPath(1, searchPasses_);
-        sendDronePath(points, "search pass " + std::to_string(searchPasses_) +
-                                  (alongY ? " (north-south lanes)" : " (east-west lanes, offset)"));
+        sendDronePath(searchPath(1, searchPasses_), searchPassName(1, searchPasses_));
         droneStatus_ = "TASKED";
         return;
     }
@@ -642,9 +716,9 @@ void SystemControlNode::uiParrot2EstopCallback(const std_msgs::msg::Bool::Shared
     RCLCPP_INFO(get_logger(), "UI: parrot2 %s", msg->data ? "STOP" : "START");
 }
 
-// Same search logic as droneStatusCallback, for parrot2 over the east half.
-// After a confirmed casualty it either guards it (it found it) or surveys the
-// Husky route (parrot1 found it).
+// Same search logic as droneStatusCallback, for parrot2 (whole area in a race,
+// east half in a split). After a confirmed casualty it either guards it (it
+// found it) or maps the Husky route and follows the Husky (parrot1 found it).
 void SystemControlNode::drone2StatusCallback(const std_msgs::msg::String::SharedPtr msg)
 {
     if (msg->data == drone2Status_) {
@@ -653,15 +727,11 @@ void SystemControlNode::drone2StatusCallback(const std_msgs::msg::String::Shared
     drone2Status_ = msg->data;
     RCLCPP_INFO(get_logger(), "Drone 2: %s", drone2Status_.c_str());
 
-    // Finished a pass with nobody found: search its half again from another direction.
+    // Finished a pass with nobody found: search again from another direction.
     if (drone2Status_ == "HOLDING" && state_ == State::SEARCHING && search2Started_ &&
         search2Passes_ < MAX_SEARCH_PASSES) {
         ++search2Passes_;
-        const bool alongY = search2Passes_ % 2 == 0;
-        sendDronePath(searchPath(2, search2Passes_),
-                      "search pass " + std::to_string(search2Passes_) +
-                          (alongY ? " (north-south lanes)" : " (east-west lanes, offset)"),
-                      2);
+        sendDronePath(searchPath(2, search2Passes_), searchPassName(2, search2Passes_), 2);
         drone2Status_ = "TASKED";
         return;
     }
@@ -675,7 +745,8 @@ void SystemControlNode::drone2StatusCallback(const std_msgs::msg::String::Shared
     }
 
     if (autoStart_ && !search2Started_ && drone2Status_ == "IDLE" && state_ == State::SEARCHING) {
-        sendDronePath(searchPath(2, 1), "area search, east half (auto_start)", 2);
+        sendDronePath(searchPath(2, 1),
+                      raceSearch_ ? "area search (auto_start)" : "area search, east half (auto_start)", 2);
         search2Started_ = true;
         search2Passes_ = 1;
     }

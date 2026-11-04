@@ -23,6 +23,8 @@ PRELOAD_MAP="false"
 DASHBOARD="true"
 LOGGER="true"
 START_PAUSED="true"
+PARROT2="false"
+DRONE_SEARCH="race"
 SHOW_MENU="false"
 SETUP="false"
 [[ $# -gt 0 ]] || SHOW_MENU="true"
@@ -56,6 +58,9 @@ Options:
       --no-dashboard    Disable the rqt dashboard (TRACE)
       --no-logger       Disable mission scoring/results logging (TRACE)
       --auto-takeoff    Start the Parrot without pressing Start Parrot (TRACE)
+      --second-drone    Add a second Parrot (/parrot2). With TRACE both drones
+                        race over the whole area on different paths
+      --split-search    With --second-drone: each drone searches half instead
       --pose N          Casualty spawn 0-5 (default: random)
       --preload-map[=true|false]
                         With --trace: start from the saved terrain map for the
@@ -95,6 +100,8 @@ Simulation settings (true = selected)
  12. Operator dashboard (TRACE):             $DASHBOARD
  13. Results logger (TRACE):                 $LOGGER
  14. Wait for Start Parrot (TRACE):           $START_PAUSED
+ 15. Second drone:                           $PARROT2
+ 16. Two-drone search (race/split):          $DRONE_SEARCH
   s. Start simulation
   b. Back
 
@@ -134,6 +141,8 @@ EOF
       12) toggle DASHBOARD ;;
       13) toggle LOGGER ;;
       14) toggle START_PAUSED ;;
+      15) toggle PARROT2 ;;
+      16) if [[ "$DRONE_SEARCH" == race ]]; then DRONE_SEARCH=split; else DRONE_SEARCH=race; fi ;;
       s|S) return 0 ;;
       b|B) return 1 ;;
       *) echo 'Invalid selection.' ;;
@@ -168,6 +177,8 @@ while (($# > 0)); do
     --no-dashboard) DASHBOARD=false; shift ;;
     --no-logger) LOGGER=false; shift ;;
     --auto-takeoff) START_PAUSED=false; shift ;;
+    --second-drone) PARROT2=true; shift ;;
+    --split-search) DRONE_SEARCH=split; shift ;;
     -w|--world)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; exit 2; }
       WORLD="$2"
@@ -335,6 +346,7 @@ MAP_ARGS=()
 
 if [[ "$TRACE" == "true" ]]; then
   echo "Starting TRACE mission: world=$WORLD rviz=$RVIZ gui=$GUI human_pose=${POSE:-random} preload_map=$PRELOAD_MAP"
+  [[ "$PARROT2" == "true" ]] && echo "  second drone: on, search=$DRONE_SEARCH"
   echo "  ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}"
   # Robots, SLAM and Nav2 are fixed on inside trace_demo, so those flags are ignored here.
   exec ros2 launch 41068_ignition_bringup trace_demo.launch.py \
@@ -344,18 +356,21 @@ if [[ "$TRACE" == "true" ]]; then
     rqt:="$DASHBOARD" \
     log_results:="$LOGGER" \
     parrot_start_paused:="$START_PAUSED" \
+    parrot2:="$PARROT2" \
+    drone_search:="$DRONE_SEARCH" \
     "${POSE_ARGS[@]}" \
     "${MAP_ARGS[@]}"
 fi
 
 echo "Starting simulation:"
-echo "  world=$WORLD husky=$HUSKY parrot=$PARROT rviz=$RVIZ gui=$GUI nav2=$NAV2 slam=$SLAM"
+echo "  world=$WORLD husky=$HUSKY parrot=$PARROT parrot2=$PARROT2 rviz=$RVIZ gui=$GUI nav2=$NAV2 slam=$SLAM"
 echo "  ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}"
 
 exec ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
   world:="$WORLD" \
   husky:="$HUSKY" \
   parrot:="$PARROT" \
+  parrot2:="$PARROT2" \
   rviz:="$RVIZ" \
     gui:="$GUI" \
   nav2:="$NAV2" \

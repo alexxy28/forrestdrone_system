@@ -202,7 +202,15 @@ void ParrotNode::onCasualtyConfirmed(const std_msgs::msg::Bool::SharedPtr msg)
         const bool forAnotherDrone = otherReviewPending_ || !lastCandidateWasMine_;
         otherReviewPending_ = false;
         if (forAnotherDrone && !awaitingCasualtyConfirmation_) {
-            RCLCPP_INFO(get_logger(), "Operator answered another drone's detection: ignoring it here");
+            // Remember the answer, so this drone doesn't ask about the same
+            // person again when it flies over them. Recorded now, not when
+            // /mission/casualty arrives: that comes a moment later, and this
+            // drone could ask in between.
+            if (lastOtherCandidate_) {
+                (msg->data ? confirmedByAnyDrone_ : rejectedByOtherDrones_).push_back(*lastOtherCandidate_);
+            }
+            RCLCPP_INFO(get_logger(), "Operator %s another drone's detection: noted, carrying on",
+                        msg->data ? "confirmed" : "rejected");
             return;
         }
     }
@@ -490,6 +498,14 @@ void ParrotNode::dismissResightings()
             }
         }
         if (!sameAs) {
+            for (const auto& rejected : rejectedByOtherDrones_) {
+                if (std::hypot(rejected.first - cx, rejected.second - cy) <= sameCasualtyRadiusM_) {
+                    sameAs = "a detection the operator rejected (other drone)";
+                    break;
+                }
+            }
+        }
+        if (!sameAs) {
             for (const auto& confirmed : confirmedByAnyDrone_) {
                 if (std::hypot(confirmed.first - cx, confirmed.second - cy) <= sameCasualtyRadiusM_) {
                     sameAs = "the confirmed casualty";
@@ -524,6 +540,7 @@ void ParrotNode::onCandidate(const geometry_msgs::msg::PointStamped::SharedPtr m
     }
     lastCandidateWasMine_ = false;
     otherReviewPending_ = true;
+    lastOtherCandidate_ = std::make_pair(msg->point.x, msg->point.y);
     RCLCPP_INFO(get_logger(),
                 "Another drone is waiting for review at (%.2f, %.2f): holding back my own "
                 "detections until the operator answers", msg->point.x, msg->point.y);

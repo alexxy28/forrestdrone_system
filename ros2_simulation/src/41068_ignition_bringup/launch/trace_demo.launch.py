@@ -17,7 +17,7 @@ Starts, in order:
 Useful arguments: world:=terrain_demo rviz:=true rqt:=true auto_start:=true gui:=true
                   control_delay:=20.0 human_pose:=0..5 log_results:=true
                   hold_check_s:=120 parrot_start_paused:=true
-                  parrot2:=true  (second drone: each drone searches half the area)
+                  parrot2:=true  (second drone; drone_search:=race or split)
 """
 
 from launch import LaunchDescription
@@ -52,8 +52,10 @@ def generate_launch_description():
                               description='Drone waits on the ground until Start Parrot '
                                           'is pressed on the dashboard'),
         DeclareLaunchArgument('parrot2', default_value='false',
-                              description='Add a second drone (/parrot2). The search area '
-                                          'is split in half between the two drones'),
+                              description='Add a second drone (/parrot2)'),
+        DeclareLaunchArgument('drone_search', default_value='race',
+                              description='With parrot2: race = both drones search the whole '
+                                          'area on different paths, split = each searches half'),
         DeclareLaunchArgument('control_delay', default_value='20.0',
                               description='Seconds to wait for Gazebo/Nav2 before the mission nodes'),
         DeclareLaunchArgument('hold_check_s', default_value='120.0',
@@ -87,6 +89,7 @@ def generate_launch_description():
                 'auto_start': LaunchConfiguration('auto_start'),
                 'parrot_start_paused': LaunchConfiguration('parrot_start_paused'),
                 'parrot2': LaunchConfiguration('parrot2'),
+                'drone_search': LaunchConfiguration('drone_search'),
             }.items(),
         )],
     )

@@ -831,6 +831,12 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._parrot2_button.setVisible(False)   # shown once the second drone reports in
         layout.addWidget(self._parrot2_button)
 
+        # Two drones: take off at the same moment, so the search is a fair race.
+        self._start_both_button = QtWidgets.QPushButton('Start both drones')
+        self._start_both_button.clicked.connect(self._start_both_drones)
+        self._start_both_button.setVisible(False)
+        layout.addWidget(self._start_both_button)
+
         # General Mission Status Block
         self._mission_label = QtWidgets.QLabel('Mission: waiting for mission control...')
         self._mission_label.setWordWrap(True)
@@ -1058,8 +1064,24 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._parrot_button.setText(('Stop Parrot' if self._robot_states.get('parrot1', False)
                                      else 'Start Parrot') + number)
         self._parrot2_button.setVisible(self._parrot2_present)
+        self._start_both_button.setVisible(
+            self._parrot2_present and not self._parrot_started and not self._parrot2_started)
         self._parrot2_button.setText('Stop Parrot 2' if self._robot_states.get('parrot2', False)
                                      else 'Start Parrot 2')
+
+    def _start_both_drones(self) -> None:
+        """Starts parrot1 and parrot2 together (both publish False on /estop)."""
+        if self._node is None:
+            self._status.setText('ROS node is not connected yet.')
+            return
+        for robot_name in ('parrot1', 'parrot2'):
+            self._ensure_subscription(robot_name)
+            self._publish_stop_state(robot_name, False)
+            self._robot_states[robot_name] = True
+        self._parrot_started = True
+        self._parrot2_started = True
+        self._status.setText('Both drones started.')
+        self._update_labels()
 
     def _toggle_robot(self, robot_name: str) -> None:
         """Flips the boolean published to the specified robot's /estop topic."""

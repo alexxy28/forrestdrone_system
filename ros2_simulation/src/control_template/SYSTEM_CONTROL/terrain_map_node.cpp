@@ -213,6 +213,11 @@ private:
             map_.addPoint(v.x(), v.y(), v.z());
         accepted_ += points.size();
 
+        // Republish on parrot1's scans only. parrot2's scans are in the map
+        // too, but publishing on both doubled the rate (20 Hz) and the
+        // dashboard, which redraws the whole map on every message, lagged.
+        if (!prefix.empty())
+            return;
         terrainPub_->publish(map_.toCloud(mapFrame_, msg->header.stamp));
 
         if ((now() - lastStats_).seconds() >= STATS_PERIOD_S) {

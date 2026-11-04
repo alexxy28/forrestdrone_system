@@ -88,6 +88,8 @@ bool guardCasualty_{false};
 // from another angle: don't stop and ask about it. 0 = off.
 double sameCasualtyRadiusM_{0.0};
 std::vector<std::pair<double, double>> confirmedByAnyDrone_;
+std::vector<std::pair<double, double>> rejectedByOtherDrones_;
+std::optional<std::pair<double, double>> lastOtherCandidate_;   // last detection another drone asked about
 rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr confirmedCasualtySub_;
 };
 
