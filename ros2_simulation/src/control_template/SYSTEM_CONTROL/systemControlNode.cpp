@@ -174,6 +174,12 @@ void SystemControlNode::casualtyCallback(const geometry_msgs::msg::PointStamped:
     casualtyX_ = msg->point.x;
     casualtyY_ = msg->point.y;
     RCLCPP_INFO(get_logger(), "Casualty at (%.2f, %.2f)", casualtyX_, casualtyY_);
+    if (secondDrone_) {
+        // The casualty's frame is the odometry frame of the drone that saw it.
+        finderDrone_ = msg->header.frame_id.rfind("parrot2", 0) == 0 ? 2 : 1;
+        RCLCPP_INFO(get_logger(), "Drone %d found the casualty and stays over it; drone %d maps the "
+                    "Husky route", finderDrone_, helperDrone());
+    }
 
     setState(State::PLANNING);
 }
@@ -265,9 +271,10 @@ void SystemControlNode::sendOverwatch()
     // and down and the drone faces the way it flies, so it comes in along the
     // line towards the casualty and stops facing it: the camera then sees
     // both the casualty and the Husky.
+    // Two drones: the one already guarding the casualty does the overwatch.
     sendDronePath({{casualtyX_ + ux * (OVERWATCH_OFFSET_M + 4.0), casualtyY_ + uy * (OVERWATCH_OFFSET_M + 4.0)},
                    {casualtyX_ + ux * OVERWATCH_OFFSET_M, casualtyY_ + uy * OVERWATCH_OFFSET_M}},
-                  "overwatch near the casualty (mission DONE)");
+                  "overwatch near the casualty (mission DONE)", secondDrone_ ? finderDrone_ : 1);
     overwatchSent_ = true;
 }
 
@@ -353,7 +360,19 @@ void SystemControlNode::surveyForRoute()
     if (state_ != State::PLANNING || !huskyOdomReceived_) {
         return;
     }
-    if (droneStatus_ != "IDLE" && droneStatus_ != "HOLDING") {
+    // Two drones: the helper (not the finder, which is guarding the casualty)
+    // surveys. It is taken off its search straight away: the casualty is
+    // found, and the Husky needs the route. It is not free while it is already
+    // surveying, paused (stop button, or waiting on its own detection) or not
+    // flying yet.
+    const int surveyDrone = secondDrone_ ? helperDrone() : 1;
+    if (secondDrone_) {
+        const std::string& status = surveyDrone == 2 ? drone2Status_ : droneStatus_;
+        if (surveyInProgress_ ||
+            (status != "IDLE" && status != "HOLDING" && status != "SEARCHING")) {
+            return;
+        }
+    } else if (droneStatus_ != "IDLE" && droneStatus_ != "HOLDING") {
         return;   // still busy (reviewing the casualty or surveying)
     }
     if (routeSurveys_ >= MAX_ROUTE_SURVEYS) {
@@ -384,8 +403,12 @@ void SystemControlNode::surveyForRoute()
     ++routeSurveys_;
     sendDronePath(zigzag(x0, y0, x1 - x0, y1 - y0, laneSpacing_),
                   "survey terrain between Husky and casualty (attempt " +
-                      std::to_string(routeSurveys_) + ")");
-    droneStatus_ = "TASKED";   // don't re-task before the drone reports back
+                      std::to_string(routeSurveys_) + ")", surveyDrone);
+    if (secondDrone_) {
+        surveyInProgress_ = true;   // cleared when the helper reports HOLDING (survey flown)
+    } else {
+        droneStatus_ = "TASKED";    // don't re-task before the drone reports back
+    }
 }
 
 void SystemControlNode::setState(State state)
@@ -449,18 +472,27 @@ void SystemControlNode::droneArea(int drone, double& x0, double& y0, double& wid
 
 // Pass 1: east-west lanes. Pass 2: north-south lanes. Pass 3: east-west, offset
 // by half a lane. (Same passes as before, now over each drone's own area.)
+// With two drones, parrot2 flies its lawnmower backwards: it starts in the far
+// (north-east) corner and works south while parrot1 works north from the
+// south-west, so they spread out instead of flying side by side.
 std::vector<std::pair<double, double>> SystemControlNode::searchPath(int drone, int pass) const
 {
     double x0, y0, width, height;
     droneArea(drone, x0, y0, width, height);
+    std::vector<std::pair<double, double>> points;
     if (pass <= 1) {
-        return zigzag(x0, y0, width, height, laneSpacing_);
+        points = zigzag(x0, y0, width, height, laneSpacing_);
+    } else {
+        const bool alongY = pass % 2 == 0;
+        const double shift = (pass >= 3) ? laneSpacing_ / 2.0 : 0.0;
+        points = alongY
+            ? zigzagAlongY(x0 + shift, y0, width - shift, height, laneSpacing_)
+            : zigzag(x0, y0 + shift, width, height - shift, laneSpacing_);
     }
-    const bool alongY = pass % 2 == 0;
-    const double shift = (pass >= 3) ? laneSpacing_ / 2.0 : 0.0;
-    return alongY
-        ? zigzagAlongY(x0 + shift, y0, width - shift, height, laneSpacing_)
-        : zigzag(x0, y0 + shift, width, height - shift, laneSpacing_);
+    if (secondDrone_ && drone == 2) {
+        std::reverse(points.begin(), points.end());
+    }
+    return points;
 }
 
 void SystemControlNode::sendDronePath(const std::vector<std::pair<double, double>>& points,
@@ -562,6 +594,11 @@ void SystemControlNode::droneStatusCallback(const std_msgs::msg::String::SharedP
         return;
     }
 
+    // Two drones: drone 1 has finished flying the route survey it was given.
+    if (secondDrone_ && surveyInProgress_ && helperDrone() == 1 && droneStatus_ == "HOLDING") {
+        surveyInProgress_ = false;
+    }
+
     // A free drone while no route exists: map the ground between Husky and casualty.
     if (droneStatus_ == "IDLE" || droneStatus_ == "HOLDING") {
         surveyForRoute();
@@ -592,16 +629,11 @@ void SystemControlNode::uiParrotEstopCallback(const std_msgs::msg::Bool::SharedP
     std_msgs::msg::Bool out;
     out.data = msg->data;
     parrotEstopPub_->publish(out);
-    // The dashboard has one Stop/Start Parrot button: it drives both drones.
-    if (parrot2EstopPub_) {
-        parrot2EstopPub_->publish(out);
-    }
-    RCLCPP_INFO(get_logger(), "UI: parrot %s%s", msg->data ? "STOP" : "START",
-                parrot2EstopPub_ ? " (both drones)" : "");
+    RCLCPP_INFO(get_logger(), "UI: parrot %s", msg->data ? "STOP" : "START");
 }
 
-// Stop/start parrot2 on its own:
-//   ros2 topic pub --once /mission_control/parrot2/estop std_msgs/msg/Bool "{data: true}"
+// The dashboard's Stop/Start Parrot 2 button (or from a terminal:
+//   ros2 topic pub --once /mission_control/parrot2/estop std_msgs/msg/Bool "{data: true}")
 void SystemControlNode::uiParrot2EstopCallback(const std_msgs::msg::Bool::SharedPtr msg)
 {
     std_msgs::msg::Bool out;
@@ -611,7 +643,8 @@ void SystemControlNode::uiParrot2EstopCallback(const std_msgs::msg::Bool::Shared
 }
 
 // Same search logic as droneStatusCallback, for parrot2 over the east half.
-// Surveys for the Husky route and the overwatch stay with parrot1.
+// After a confirmed casualty it either guards it (it found it) or surveys the
+// Husky route (parrot1 found it).
 void SystemControlNode::drone2StatusCallback(const std_msgs::msg::String::SharedPtr msg)
 {
     if (msg->data == drone2Status_) {
@@ -631,6 +664,14 @@ void SystemControlNode::drone2StatusCallback(const std_msgs::msg::String::Shared
                       2);
         drone2Status_ = "TASKED";
         return;
+    }
+
+    // Drone 2 has finished flying the route survey it was given.
+    if (surveyInProgress_ && helperDrone() == 2 && drone2Status_ == "HOLDING") {
+        surveyInProgress_ = false;
+    }
+    if (drone2Status_ == "IDLE" || drone2Status_ == "HOLDING") {
+        surveyForRoute();
     }
 
     if (autoStart_ && !search2Started_ && drone2Status_ == "IDLE" && state_ == State::SEARCHING) {

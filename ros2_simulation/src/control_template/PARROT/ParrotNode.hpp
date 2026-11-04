@@ -41,6 +41,8 @@ void startCasualtyReview(const Casualty& casualty);
 void trimPatrolWaypointsAlreadyPassed();
 void onCandidate(const geometry_msgs::msg::PointStamped::SharedPtr msg);
 void publishCandidate(const Casualty& casualty);
+void dismissResightings();
+void guardCasualty(double casualtyX, double casualtyY);
 
 Parrot parrot_;
 ThermalCamera thermalCamera_;
@@ -77,6 +79,16 @@ bool otherReviewPending_{false};     // another drone's detection is on the dash
 bool lastCandidateWasMine_{false};   // the detection last shown to the operator is ours
 std::optional<std::pair<double, double>> myLastCandidate_;
 rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr candidateSub_;
+
+// guard_casualty: after circling a casualty it found, the drone stays over it
+// instead of going back to its search (the other drone carries on searching).
+bool guardCasualty_{false};
+// same_casualty_radius_m: a new detection this close to one the operator
+// rejected, or to a casualty any drone confirmed, is the same thing seen again
+// from another angle: don't stop and ask about it. 0 = off.
+double sameCasualtyRadiusM_{0.0};
+std::vector<std::pair<double, double>> confirmedByAnyDrone_;
+rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr confirmedCasualtySub_;
 };
 
 #endif

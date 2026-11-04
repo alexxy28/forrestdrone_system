@@ -705,8 +705,15 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         
         # True = robot running (button reads "Stop"). The drone starts PAUSED in
         # the TRACE demo; _parrot_status_cb corrects this if it is already flying.
-        self._robot_states = {'husky1': True, 'parrot1': False}
+        self._robot_states = {'husky1': True, 'parrot1': False, 'parrot2': False}
         self._parrot_started = False   # operator has pressed Start Parrot at least once
+
+        # Second drone: its button and status line only appear once /parrot2
+        # reports a status, so the one-drone dashboard looks exactly as before.
+        self._parrot2_status_sub = None
+        self._parrot2_present = False
+        self._parrot2_status = 'unknown'
+        self._parrot2_started = False
         
         # Update UI text dynamically at 5 FPS
         self._ui_timer = QTimer(self)
@@ -724,6 +731,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             Bool, self._discovered_topic, self._discovered_cb, LATCHED)
         self._parrot_status_sub = self._node.create_subscription(
             String, '/parrot1/mission/status', self._parrot_status_cb, LATCHED)
+        self._parrot2_status_sub = self._node.create_subscription(
+            String, '/parrot2/mission/status', self._parrot2_status_cb, LATCHED)
             
         # Mission state, so the panel never shows a stale message.
         self._mission_subs = [
@@ -764,7 +773,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             self._waypoint_publisher = None
 
         for subscription in [*self._subscriptions.values(), *self._mission_subs,
-                             self._discovered_sub, self._parrot_status_sub]:
+                             self._discovered_sub, self._parrot_status_sub,
+                             self._parrot2_status_sub]:
             if subscription is None:
                 continue
             try:
@@ -815,6 +825,11 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._parrot_button = QtWidgets.QPushButton('Stop Parrot')
         self._parrot_button.clicked.connect(lambda: self._toggle_robot('parrot1'))
         layout.addWidget(self._parrot_button)
+
+        self._parrot2_button = QtWidgets.QPushButton('Start Parrot 2')
+        self._parrot2_button.clicked.connect(lambda: self._toggle_robot('parrot2'))
+        self._parrot2_button.setVisible(False)   # shown once the second drone reports in
+        layout.addWidget(self._parrot2_button)
 
         # General Mission Status Block
         self._mission_label = QtWidgets.QLabel('Mission: waiting for mission control...')
@@ -880,6 +895,13 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if not self._parrot_started and msg.data in ('CLIMBING', 'IDLE', 'SEARCHING', 'HOLDING'):
             self._robot_states['parrot1'] = True
             self._parrot_started = True
+
+    def _parrot2_status_cb(self, msg: String) -> None:
+        self._parrot2_status = msg.data
+        self._parrot2_present = True
+        if not self._parrot2_started and msg.data in ('CLIMBING', 'IDLE', 'SEARCHING', 'HOLDING'):
+            self._robot_states['parrot2'] = True
+            self._parrot2_started = True
 
     def _mission_state_cb(self, msg: String) -> None:
         if msg.data != self._mission_state and self._mission_state != 'unknown':
@@ -983,7 +1005,12 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
                       else ' (flying to overwatch near the casualty)')
         elif not self._parrot_started:
             drone += ' (on the ground: press Start Parrot to begin the search)'
-        lines.append(f'<b>Drone:</b> {drone}')
+        lines.append(f'<b>Drone{" 1" if self._parrot2_present else ""}:</b> {drone}')
+        if self._parrot2_present:
+            drone2 = self._parrot2_status
+            if not self._parrot2_started:
+                drone2 += ' (on the ground: press Start Parrot 2)'
+            lines.append(f'<b>Drone 2:</b> {drone2}')
         
         husky = self._husky_status
         if self._casualty is not None and self._husky_pos is not None:
@@ -1027,7 +1054,12 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         
         # Update the Stop/Start buttons based on current estop bools
         self._husky_button.setText('Stop Husky' if self._robot_states.get('husky1', False) else 'Start Husky')
-        self._parrot_button.setText('Stop Parrot' if self._robot_states.get('parrot1', False) else 'Start Parrot')
+        number = ' 1' if self._parrot2_present else ''
+        self._parrot_button.setText(('Stop Parrot' if self._robot_states.get('parrot1', False)
+                                     else 'Start Parrot') + number)
+        self._parrot2_button.setVisible(self._parrot2_present)
+        self._parrot2_button.setText('Stop Parrot 2' if self._robot_states.get('parrot2', False)
+                                     else 'Start Parrot 2')
 
     def _toggle_robot(self, robot_name: str) -> None:
         """Flips the boolean published to the specified robot's /estop topic."""
@@ -1051,6 +1083,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             self._robot_states[clean_name] = True
             if clean_name == 'parrot1':
                 self._parrot_started = True
+            if clean_name == 'parrot2':
+                self._parrot2_started = True
 
         self._update_labels()
 

@@ -84,11 +84,23 @@ stopSub_ = create_subscription<std_msgs::msg::Bool>(
 // More than one drone: listen to the shared detection topic, so this drone
 // knows when another drone is waiting for the operator to confirm or reject.
 multiDrone_ = declare_parameter<bool>("multi_drone", false);
+// Both default to on with more than one drone and off with one, so a single
+// drone behaves exactly as before.
+guardCasualty_ = declare_parameter<bool>("guard_casualty", multiDrone_);
+sameCasualtyRadiusM_ = declare_parameter<double>("same_casualty_radius_m", multiDrone_ ? 5.0 : 0.0);
 if (multiDrone_) {
     candidateSub_ = create_subscription<geometry_msgs::msg::PointStamped>(
         topics::CASUALTY_CANDIDATE, latched,
         std::bind(&ParrotNode::onCandidate, this, std::placeholders::_1));
-    RCLCPP_INFO(get_logger(), "multi_drone: sharing the operator review with the other drone(s)");
+    // Casualties confirmed by any drone (our own included), so a drone flying
+    // over one later doesn't ask the operator about the same person again.
+    confirmedCasualtySub_ = create_subscription<geometry_msgs::msg::PointStamped>(
+        topics::CASUALTY, latched,
+        [this](const geometry_msgs::msg::PointStamped::SharedPtr msg) {
+            confirmedByAnyDrone_.emplace_back(msg->point.x, msg->point.y);
+        });
+    RCLCPP_INFO(get_logger(), "multi_drone: sharing the operator review with the other drone(s)%s",
+                guardCasualty_ ? ", staying over a casualty once it is confirmed" : "");
 }
 
 timer_ = create_wall_timer(std::chrono::milliseconds(100), std::bind(&ParrotNode::tick, this));
@@ -326,6 +338,10 @@ if (!casualtyConfirmed_) {
 }
 }
 
+if (sameCasualtyRadiusM_ > 0.0) {
+    dismissResightings();
+}
+
 // multi_drone: while another drone's detection is on the dashboard, keep
 // searching and ask about our own detections once the operator has answered.
 if (!verifyTarget_ && !(multiDrone_ && otherReviewPending_)) {
@@ -388,6 +404,16 @@ if (verifyTarget_) {
             return;
         }
         casualtyOrbitActive_ = false;
+
+        // guard_casualty: stay with the person instead of resuming the search.
+        if (guardCasualty_ && casualty != casualties.end()) {
+            guardCasualty(casualty->position.point.x, casualty->position.point.y);
+            verifyTarget_.reset();
+            verifyCasualtyIndex_.reset();
+            setState(State::SEARCHING);
+            parrot_.flyToWaypoint();
+            return;
+        }
     }
 
     verifyTarget_.reset();
@@ -413,6 +439,71 @@ return;
     }
 setState(State::SEARCHING);
 parrot_.flyToWaypoint();
+}
+
+// After the orbit: hold at review distance, on the side the drone is on. It
+// flies out a little and back in towards the person, so it stops facing them
+// (the camera looks the way the drone flies). It holds there until mission
+// control sends it something new (the overwatch once the Husky arrives).
+void ParrotNode::guardCasualty(double casualtyX, double casualtyY)
+{
+    double ux = parrot_.x() - casualtyX;
+    double uy = parrot_.y() - casualtyY;
+    const double n = std::hypot(ux, uy);
+    if (n < 1e-3) {
+        ux = 1.0;
+        uy = 0.0;
+    } else {
+        ux /= n;
+        uy /= n;
+    }
+    const double r = casualtyStandOffDistanceM;
+    parrot_.setWaypoints({{casualtyX + ux * (r + 4.0), casualtyY + uy * (r + 4.0)},
+                          {casualtyX + ux * r, casualtyY + uy * r}});
+    patrolMissionActive_ = false;
+    patrolWaypoints_.clear();
+    hasMission_ = true;
+    RCLCPP_INFO(get_logger(),
+                "Staying over the casualty at (%.2f, %.2f), %.1f m away: the other drone carries on",
+                casualtyX, casualtyY, r);
+}
+
+// same_casualty_radius_m: the thermal camera only merges sightings within 2 m,
+// so the same person (or the same rejected false alarm) seen again from
+// another angle can show up as a new detection. Mark those as reviewed instead
+// of stopping to ask the operator about them again.
+void ParrotNode::dismissResightings()
+{
+    const auto casualties = thermalCamera_.getCasualties();
+    for (const auto& candidate : casualties) {
+        if (candidate.status != CasualtyStatus::UNREVIEWED) {
+            continue;
+        }
+        const double cx = candidate.position.point.x;
+        const double cy = candidate.position.point.y;
+        const char* sameAs = nullptr;
+        for (const auto& other : casualties) {
+            if (other.status == CasualtyStatus::DENIED &&
+                std::hypot(other.position.point.x - cx, other.position.point.y - cy) <= sameCasualtyRadiusM_) {
+                sameAs = "a detection the operator rejected";
+                break;
+            }
+        }
+        if (!sameAs) {
+            for (const auto& confirmed : confirmedByAnyDrone_) {
+                if (std::hypot(confirmed.first - cx, confirmed.second - cy) <= sameCasualtyRadiusM_) {
+                    sameAs = "the confirmed casualty";
+                    break;
+                }
+            }
+        }
+        if (sameAs) {
+            thermalCamera_.denyCasualty(candidate.index);
+            RCLCPP_INFO(get_logger(),
+                        "Detection %zu at (%.2f, %.2f) is within %.1f m of %s: same one seen again, "
+                        "not asking the operator", candidate.index, cx, cy, sameCasualtyRadiusM_, sameAs);
+        }
+    }
 }
 
 void ParrotNode::publishCandidate(const Casualty& casualty)

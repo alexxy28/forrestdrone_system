@@ -114,6 +114,11 @@ class SystemControlNode : public rclcpp::Node{
     std::string drone2Status_{"UNKNOWN"};
     bool search2Started_{false};
     int search2Passes_{0};
+    // Who does what once a casualty is confirmed: the drone that found it stays
+    // over it (and does the overwatch), the other one maps the Husky's route.
+    int finderDrone_{1};
+    bool surveyInProgress_{false};
+    int helperDrone() const { return finderDrone_ == 1 ? 2 : 1; }
 
     State state_{State::SEARCHING};
     int routeStep_;
