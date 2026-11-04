@@ -50,6 +50,7 @@ class SystemControlNode : public rclcpp::Node{
     void watchdog();
     void checkArrival();
     void sendOverwatch();
+    void failMission();
     std::vector<std::pair<double, double>> zigzagAlongY(double x0, double y0, double width,
                                                         double height, double spacing) const;
     void surveyForRoute();

@@ -225,7 +225,7 @@ void SystemControlNode::huskyStatusCallback(const std_msgs::msg::String::SharedP
             RCLCPP_ERROR(get_logger(), "Replanned route got the Husky only %.1f m closer (still %.1f m "
                          "from the casualty): blocked. Mission FAILED, operator decision needed",
                          progress, distNow);
-            setState(State::FAILED);
+            failMission();
             return;
         }
         if (routeReplans_ < MAX_ROUTE_REPLANS) {
@@ -237,7 +237,7 @@ void SystemControlNode::huskyStatusCallback(const std_msgs::msg::String::SharedP
         }
         RCLCPP_ERROR(get_logger(), "Husky failed %d routes to the casualty: operator decision needed",
                      routeReplans_ + 1);
-        setState(State::FAILED);
+        failMission();
     }
 }
 
@@ -258,8 +258,9 @@ void SystemControlNode::checkArrival()
     sendOverwatch();
 }
 
-// Mission complete: the drone stops patrolling and holds near the casualty,
-// camera on the scene, until the operator gives it a new task.
+// Mission over (DONE, or FAILED and waiting for the operator): the drone
+// stops patrolling and holds near the casualty, camera on the scene, until
+// the operator gives it a new task.
 void SystemControlNode::sendOverwatch()
 {
     if (overwatchSent_) {
@@ -280,17 +281,26 @@ void SystemControlNode::sendOverwatch()
     // line towards the casualty and stops facing it: the camera then sees
     // both the casualty and the Husky.
     // Two drones: the one already guarding the casualty does the overwatch.
+    const std::string mission = state_ == State::FAILED ? "mission FAILED" : "mission DONE";
     sendDronePath({{casualtyX_ + ux * (OVERWATCH_OFFSET_M + 4.0), casualtyY_ + uy * (OVERWATCH_OFFSET_M + 4.0)},
                    {casualtyX_ + ux * OVERWATCH_OFFSET_M, casualtyY_ + uy * OVERWATCH_OFFSET_M}},
-                  "overwatch near the casualty (mission DONE)", secondDrone_ ? finderDrone_ : 1);
+                  "overwatch near the casualty (" + mission + ")", secondDrone_ ? finderDrone_ : 1);
     if (secondDrone_) {
         // The other drone (it followed the Husky in) holds on the far side,
         // also facing the casualty: both cameras on the scene.
         sendDronePath({{casualtyX_ - ux * (OVERWATCH_OFFSET_M + 4.0), casualtyY_ - uy * (OVERWATCH_OFFSET_M + 4.0)},
                        {casualtyX_ - ux * OVERWATCH_OFFSET_M, casualtyY_ - uy * OVERWATCH_OFFSET_M}},
-                      "overwatch, far side of the casualty (mission DONE)", helperDrone());
+                      "overwatch, far side of the casualty (" + mission + ")", helperDrone());
     }
     overwatchSent_ = true;
+}
+
+// The Husky cannot get there: the operator decides what happens next (e.g. a
+// team on foot). Meanwhile the drones keep the casualty in camera view.
+void SystemControlNode::failMission()
+{
+    setState(State::FAILED);
+    sendOverwatch();
 }
 
 // Two drones, Husky driving: the helper flies behind it, on the line from the
@@ -427,6 +437,24 @@ void SystemControlNode::surveyForRoute()
     } else if (droneStatus_ != "IDLE" && droneStatus_ != "HOLDING") {
         return;   // still busy (reviewing the casualty or surveying)
     }
+    // More surveys only help if the route could run through ground the map
+    // has not measured yet, or through cells only just over the limits. After
+    // the first survey, plan again counting those as drivable: if even that
+    // finds no route, the measured terrain itself cuts the casualty off (e.g.
+    // on top of a cliff), so stop now rather than fly the remaining surveys.
+    // Offline test on the real terrain, casualty on the rock (pose 6): before
+    // this check, 3 surveys (451 m of flying, ~5 min at 1.5 m/s) before FAILED;
+    // with it, 1 survey. That first survey is still flown: cells measured from
+    // only a few returns can change.
+    if (routeSurveys_ >= 1 &&
+        terrainPlanner_.plan(huskyX_, huskyY_, casualtyX_, casualtyY_, true).empty()) {
+        RCLCPP_ERROR(get_logger(), "No drivable route to the casualty at (%.2f, %.2f), even through the "
+                     "ground not mapped yet: the mapped terrain cuts it off. Unreachable by ground after "
+                     "%d terrain survey(s). Mission FAILED, operator decision needed (e.g. send a team "
+                     "on foot)", casualtyX_, casualtyY_, routeSurveys_);
+        failMission();
+        return;
+    }
     if (routeSurveys_ >= MAX_ROUTE_SURVEYS) {
         // The drone is back from its last survey. Give the terrain map a
         // moment to take in the last strip, then stop and tell the operator,
@@ -441,7 +469,7 @@ void SystemControlNode::surveyForRoute()
             RCLCPP_ERROR(get_logger(), "No drivable route to the casualty at (%.2f, %.2f) after %d "
                          "terrain surveys: unreachable by ground. Mission FAILED, operator decision "
                          "needed (e.g. send a team on foot)", casualtyX_, casualtyY_, routeSurveys_);
-            setState(State::FAILED);
+            failMission();
         }
         return;
     }

@@ -991,7 +991,11 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             self._casualty_label.setText('✔ Husky has reached the casualty.')
             self._casualty_label.setStyleSheet('color: white; background: #1b7f2a; padding: 4px;')
         elif self._mission_state == 'FAILED':
-            self._casualty_label.setText('✖ Husky could not reach the casualty: operator decision needed.')
+            # No route ever planned = the terrain map shows no way there at all.
+            self._casualty_label.setText(
+                '✖ No drivable ground route: the casualty is unreachable by the Husky. Operator '
+                'decision needed (e.g. send a team on foot).' if not self._route else
+                '✖ Husky could not reach the casualty (blocked on its route): operator decision needed.')
             self._casualty_label.setStyleSheet('color: black; background: #f2b600; padding: 4px;')
         elif self._casualty is not None:
             self._casualty_label.setText('Casualty confirmed. No detection awaiting review.')
@@ -1006,7 +1010,7 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         drone = self._parrot_status
         if self._mission_state in ('PLANNING', 'HUSKY_EN_ROUTE') and drone == 'SEARCHING':
             drone += ' (patrolling for further casualties)'
-        elif self._mission_state == 'DONE':
+        elif self._mission_state in ('DONE', 'FAILED'):
             drone += (' (overwatch near the casualty)' if drone == 'HOLDING'
                       else ' (flying to overwatch near the casualty)')
         elif not self._parrot_started:

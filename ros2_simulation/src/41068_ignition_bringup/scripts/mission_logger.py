@@ -146,6 +146,11 @@ class MissionLogger(Node):
             self.declare_parameter('results_dir', '~/trace_results').value)
         self.human_name = self.declare_parameter('human_model', 'human_heat1').value
         self.husky_name = self.declare_parameter('husky_model', 'husky1').value
+        # Test conditions, recorded with each row so runs can be compared.
+        self.parrot2 = str(self.declare_parameter(
+            'parrot2', 'false', ParameterDescriptor(dynamic_typing=True)).value).lower() in ('true', '1')
+        self.drone_search = self.declare_parameter('drone_search', 'race').value
+        self.found_by = ''           # parrot1 / parrot2: whose detection was confirmed
 
         self.t0 = time.time()
         self.events = []
@@ -178,6 +183,9 @@ class MissionLogger(Node):
         self.create_subscription(Odometry, '/husky1/odometry', self.on_odom, qos_profile_sensor_data)
         self.create_subscription(Bool, '/husky1/estop', self.on_estop, 10)
         self.create_subscription(Bool, '/parrot1/estop', self.on_parrot_estop, 10)
+        if self.parrot2:
+            self.create_subscription(Bool, '/parrot2/estop',
+                                     lambda msg: self.on_parrot_estop(msg, 'Parrot 2'), 10)
         self.create_timer(5.0, self.fetch_ground_truth_once)
         self.get_logger().info(f'Recording mission (results -> {self.results_dir}/results.csv)')
 
@@ -197,6 +205,8 @@ class MissionLogger(Node):
 
     def on_candidate(self, msg):
         self.candidate = (msg.point.x, msg.point.y)
+        if not self.detected:
+            self.found_by = msg.header.frame_id.split('_')[0]   # parrot1_odom -> parrot1
         if self.t_detect is None:
             self.t_detect = time.time()
         err = ''
@@ -210,6 +220,7 @@ class MissionLogger(Node):
 
     def on_casualty(self, msg):
         self.detected = (msg.point.x, msg.point.y)
+        self.found_by = msg.header.frame_id.split('_')[0] or self.found_by
         self.log(f'Casualty sent to mission control at {fmt(self.detected)}')
 
     def on_route(self, msg):
@@ -267,10 +278,10 @@ class MissionLogger(Node):
         self.estops += 1
         self.log('Husky stop button: ' + ('STOP' if msg.data else 'START'))
 
-    def on_parrot_estop(self, msg):
+    def on_parrot_estop(self, msg, name='Parrot'):
         if not msg.data and self.t_search_start is None:
             self.t_search_start = time.time()
-        self.log('Parrot stop button: ' + ('STOP' if msg.data else 'START'))
+        self.log(f'{name} stop button: ' + ('STOP' if msg.data else 'START'))
 
     # ---------------- summary ----------------
     def report_once(self):
@@ -294,11 +305,20 @@ class MissionLogger(Node):
             return math.dist(a[:2], b[:2]) if a and b else None
 
         goal = self.route[-1] if self.route else None
+        # FAILED with no route ever planned: the terrain map showed no way there.
+        if self.state == 'DONE':
+            outcome = 'DONE'
+        elif self.state == 'FAILED':
+            outcome = 'FAILED_BLOCKED' if self.route_count else 'FAILED_UNREACHABLE'
+        else:
+            outcome = f'INCOMPLETE_{self.state or "NO_STATE"}'
         route_len = (sum(math.dist(a, b) for a, b in zip(self.route, self.route[1:]))
                      if self.route else None)
         row = {
             'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'human_pose': self.pose_label,
+            'world': self.world,
+            'drones': f'2 {self.drone_search}' if self.parrot2 else '1',
             'true_human_x': human[0] if human else '', 'true_human_y': human[1] if human else '',
             'detected_x': self.detected[0] if self.detected else (self.candidate[0] if self.candidate else ''),
             'detected_y': self.detected[1] if self.detected else (self.candidate[1] if self.candidate else ''),
@@ -325,13 +345,16 @@ class MissionLogger(Node):
             'search_s': (self.t_detect - (self.t_search_start or self.t0)) if self.t_detect else '',
             'confirm_to_end_s': (self.t_end - self.t_confirm) if (self.t_end and self.t_confirm) else '',
             'husky_estops': self.estops,
+            'found_by': self.found_by,
+            'outcome': outcome,
         }
         row = {k: (round(v, 2) if isinstance(v, float) else v) for k, v in row.items()}
 
         lines = [
             '',
             '================ TRACE TEST RESULT ================',
-            f' human_pose            : {self.pose_label or "?"}',
+            f' human_pose            : {self.pose_label or "?"}   world {self.world}, '
+            f'drones {row["drones"]}' + (f', found by {self.found_by}' if self.found_by else ''),
             f' Person (ground truth) : model origin (feet) {fmt(human)}',
             f' Person body centre    : {fmt(centre)}   (feet + 0.9 m along the body)',
             f' Detected casualty     : {fmt(self.detected or self.candidate)}   error '
@@ -348,7 +371,8 @@ class MissionLogger(Node):
             f'{row["stop_dist_to_detected_m"]} m to the detected point, '
             f'{row["stop_dist_to_feet_origin_m"]} m to the model origin (feet)',
             '                         (Husky centre; body = collision box of human/model.sdf)',
-            f' Navigation result     : {self.husky_status}   mission state {self.state}',
+            f' Navigation result     : {self.husky_status}   mission state {self.state}   '
+            f'outcome {outcome}',
             f' Search time           : {row["search_s"]} s (wall clock)   '
             f'confirm -> end: {row["confirm_to_end_s"]} s',
             '===================================================',

@@ -62,7 +62,8 @@ Options:
       --second-drone    Add a second Parrot (/parrot2). With TRACE both drones
                         race over the whole area on different paths
       --split-search    With --second-drone: each drone searches half instead
-      --pose N          Casualty spawn 0-5 (default: random)
+      --pose N          Casualty spawn 0-5 (default: random), 6 = on the rock,
+                        unreachable by ground (test)
       --preload-map[=true|false]
                         With --trace: start from the saved terrain map for the
                         world (pre_scanned_height_maps/WORLD)
@@ -125,9 +126,9 @@ EOF
           *) echo 'Invalid world selection.' ;;
         esac ;;
       8)
-        read -r -p 'Casualty pose (0-5, or r for random): ' value || return 1
+        read -r -p 'Casualty pose (0-5, 6 = unreachable test, or r for random): ' value || return 1
         case "$value" in
-          [0-5]) POSE="$value" ;; r|R) POSE='' ;; *) echo 'Invalid pose.' ;;
+          [0-6]) POSE="$value" ;; r|R) POSE='' ;; *) echo 'Invalid pose.' ;;
         esac ;;
       9)
         read -r -p 'Robots (1 both, 2 Husky only, 3 Parrot only): ' value || return 1
@@ -289,8 +290,8 @@ if [[ -n "$ROS_DOMAIN" && ! "$ROS_DOMAIN" =~ ^[0-9]+$ ]]; then
   exit 2
 fi
 
-if [[ -n "$POSE" && ! "$POSE" =~ ^[0-5]$ ]]; then
-  echo "Pose must be 0-5." >&2
+if [[ -n "$POSE" && ! "$POSE" =~ ^[0-6]$ ]]; then
+  echo "Pose must be 0-6." >&2
   exit 2
 fi
 

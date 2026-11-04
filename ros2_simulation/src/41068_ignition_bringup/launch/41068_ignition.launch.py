@@ -35,15 +35,24 @@ _TERRAIN_DEMO_HUMAN_POSES = [
     '2.3978 12.5679 0.4785 -1.7 0 0',
 ]
 
+# Test poses: only with human_pose:=6 (or higher), never chosen at random.
+_TERRAIN_DEMO_TEST_POSES = [
+    # 6: on top of the flat rock north of the start (top 10.63 m, walls 60-80 deg;
+    #    the Husky's limit is 25 deg). Unreachable by ground: tests the FAILED path.
+    '-3.6 13.6 10.72 -1.57 0 0',
+]
+
 
 def _randomize_terrain_human_pose(world_path, choice='random'):
     with open(world_path, 'r', encoding='utf-8') as handle:
         world_text = handle.read()
 
-    # human_pose:=random (default) or 0-5 to repeat a scenario. This only sets
-    # where the simulated person spawns; the robots are never told.
-    if str(choice).strip().isdigit() and int(choice) < len(_TERRAIN_DEMO_HUMAN_POSES):
-        selected_pose = _TERRAIN_DEMO_HUMAN_POSES[int(choice)]
+    # human_pose:=random (default) or 0-5 to repeat a scenario, 6 for the
+    # unreachable test. This only sets where the simulated person spawns; the
+    # robots are never told.
+    poses = _TERRAIN_DEMO_HUMAN_POSES + _TERRAIN_DEMO_TEST_POSES
+    if str(choice).strip().isdigit() and int(choice) < len(poses):
+        selected_pose = poses[int(choice)]
     else:
         selected_pose = random.choice(_TERRAIN_DEMO_HUMAN_POSES)
     include_pattern = (
@@ -401,7 +410,8 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument(
         'human_pose',
         default_value='random',
-        description='terrain_demo casualty spawn: random, or 0-5 to repeat a scenario',
+        description='terrain_demo casualty spawn: random, or 0-5 to repeat a scenario, '
+                    '6 = on the rock, unreachable by ground (test)',
     ))
 
     ld.add_action(DeclareLaunchArgument(

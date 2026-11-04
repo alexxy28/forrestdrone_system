@@ -15,7 +15,7 @@ Starts, in order:
      evaluation only; the robots never see it)
 
 Useful arguments: world:=terrain_demo rviz:=true rqt:=true auto_start:=true gui:=true
-                  control_delay:=20.0 human_pose:=0..5 log_results:=true
+                  control_delay:=20.0 human_pose:=0..6 log_results:=true
                   hold_check_s:=120 parrot_start_paused:=true
                   parrot2:=true  (second drone; drone_search:=race or split)
 """
@@ -42,7 +42,8 @@ def generate_launch_description():
                                           'the heat-signature casualty'),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument('human_pose', default_value='random',
-                              description='Casualty spawn: random, or 0-5 to repeat a scenario'),
+                              description='Casualty spawn: random, or 0-5 to repeat a scenario, 6 = on the '
+                                          'rock, unreachable by ground (test)'),
         DeclareLaunchArgument('gui', default_value='true',
                               description='Gazebo window (false = server only, less CPU)'),
         DeclareLaunchArgument('rqt', default_value='true',
@@ -115,7 +116,10 @@ def generate_launch_description():
                      'human_pose': ParameterValue(LaunchConfiguration('human_pose'),
                                                   value_type=str),
                      'hold_check_s': ParameterValue(LaunchConfiguration('hold_check_s'),
-                                                    value_type=float)}],
+                                                    value_type=float),
+                     # test conditions, saved with each result row
+                     'parrot2': ParameterValue(LaunchConfiguration('parrot2'), value_type=str),
+                     'drone_search': LaunchConfiguration('drone_search')}],
         condition=IfCondition(LaunchConfiguration('log_results')),
     )
 
