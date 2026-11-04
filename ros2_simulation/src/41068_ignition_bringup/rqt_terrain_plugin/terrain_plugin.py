@@ -995,7 +995,7 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         
         # 3. Update Button Enabled/Disabled States
         confirmed = self._casualty is not None or self._mission_state in ('PLANNING', 'HUSKY_EN_ROUTE', 'DONE')
-        can_confirm = (self._casualty_pending or (self._candidate is not None and self._casualty is None)) and not confirmed
+        can_confirm = (self._casualty_pending or self._candidate is not None) and not confirmed
         
         # Once either answer is sent, keep Reject disabled to avoid repeated toggles.
         reject_locked = self._last_answer is not None

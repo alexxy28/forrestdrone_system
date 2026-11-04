@@ -102,8 +102,9 @@ bool ParrotNode::hasDetectedCasualty() const
 bool ParrotNode::confirmCasualty(std::size_t index)
 {
     const auto casualties = thermalCamera_.getCasualties();
+    // A DENIED casualty may still be confirmed later (operator changed their mind).
     if (index == 0 || index > casualties.size() ||
-        casualties[index - 1].status != CasualtyStatus::UNREVIEWED) {
+        casualties[index - 1].status == CasualtyStatus::CONFIRMED) {
         return false;
     }
     if (!thermalCamera_.confirmCasualty(index)) {
