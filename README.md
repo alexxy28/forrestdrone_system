@@ -23,10 +23,30 @@ Everything runs in simulation, on ROS 2 Humble and Ignition Gazebo Fortress.
 ```bash
 git clone <this repo> ~/git/forrestdrone_system
 cd ~/git/forrestdrone_system
+./run_simulation.sh
+```
+
+This opens a menu:
+
+1. **Configure add-ons and run simulation** opens the simulation settings. Toggle the
+   Gazebo window, RViz, operator dashboard, results logger, saved terrain map, build
+   step, and local-only networking. Choose whether the drone waits for Start Parrot. You
+   can also choose the world and casualty pose. In simulator-only mode, choose which
+   robots to launch and whether to run Nav2 or SLAM. Press **s** to start.
+2. **Update from GitHub and install/setup dependencies** fetches the configured GitHub
+   remote, fast-forwards the tracking branch when the checkout is clean, installs
+   ROS 2 Humble, Ignition Fortress and the required packages on Ubuntu 22.04, resolves
+   workspace dependencies with rosdep, and builds the workspace. Local edits are
+   preserved; when present, updates are fetched but not merged. Setup uses `sudo`
+   for system packages and repository configuration.
+
+For a direct full-mission launch without menus:
+
+```bash
 ./run_simulation.sh --trace
 ```
 
-This builds the workspace and starts the full mission:
+The full mission builds the workspace and starts:
 
 - Gazebo with the `terrain_demo` world and both robots
 - SLAM, Nav2 for the Husky, and RViz
@@ -47,10 +67,21 @@ Common variations:
 ./run_simulation.sh --help                         # all options
 ```
 
-Without `--trace`, the script starts only the simulator and the robots, with Nav2 and RViz
-by default. This is useful for working on one part at a time.
+The full TRACE mission is the default; `--trace` can also select it explicitly.
+With `--sim-only`, the script starts only the simulator and the robots, with Nav2 and
+RViz by default. This is useful for working on one part at a time.
+Passing command-line options launches directly; use `--menu` to open the menu with
+those options preselected.
 
 ## Installation
+
+For automatic installation on Ubuntu 22.04, select **2** in the main menu or run:
+
+```bash
+./run_simulation.sh --setup
+```
+
+The manual equivalent is described below.
 
 You need Ubuntu 22.04 with ROS 2 Humble. Install ROS 2 Humble first by following the
 [official guide](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html).
@@ -70,7 +101,12 @@ sudo apt install -y ros-dev-tools \
   ros-humble-slam-toolbox ros-humble-robot-localization \
   ros-humble-xacro ros-humble-cv-bridge ros-humble-rqt-image-view \
   ros-humble-teleop-twist-keyboard \
-  libopencv-dev python3-numpy
+  ros-humble-sensor-msgs-py ros-humble-rqt-robot-steering \
+  ros-humble-rqt-gui ros-humble-rqt-gui-py ros-humble-python-qt-binding \
+  ros-humble-rqt-publisher ros-humble-rqt-topic ros-humble-rqt-action \
+  ros-humble-robot-state-publisher ros-humble-rviz2 \
+  ros-humble-ament-cmake-python ros-humble-pluginlib \
+  libopencv-dev python3-numpy python3-scipy python3-opencv
 ```
 
 Then build. `run_simulation.sh` builds automatically; to build by hand:
