@@ -39,7 +39,8 @@ With no arguments, open the interactive menu.
 Options:
       --menu            Open the interactive menu
       --setup           Update from GitHub, install dependencies, and build
-  -w, --world WORLD     World: simple_trees, large_demo, or terrain_demo
+  -w, --world WORLD     World: simple_trees, large_demo, terrain_demo, or demo_2
+                        (demo_2 = terrain_demo with pine trees and grass)
       --husky-only      Launch only the Husky
       --parrot-only     Launch only the Parrot
       --no-rviz         Do not launch RViz
@@ -118,9 +119,9 @@ EOF
         if [[ "$TRACE" == true ]]; then toggle PRELOAD_MAP
         else echo 'Saved terrain maps require the full TRACE mission.'; fi ;;
       7)
-        read -r -p 'World (1 terrain_demo, 2 simple_trees, 3 large_demo): ' value || return 1
+        read -r -p 'World (1 terrain_demo, 2 simple_trees, 3 large_demo, 4 demo_2): ' value || return 1
         case "$value" in
-          1) WORLD=terrain_demo ;; 2) WORLD=simple_trees ;; 3) WORLD=large_demo ;;
+          1) WORLD=terrain_demo ;; 2) WORLD=simple_trees ;; 3) WORLD=large_demo ;; 4) WORLD=demo_2 ;;
           *) echo 'Invalid world selection.' ;;
         esac ;;
       8)
@@ -276,9 +277,9 @@ if [[ "$SETUP" == true ]]; then
 fi
 
 case "$WORLD" in
-  simple_trees|large_demo|terrain_demo) ;;
+  simple_trees|large_demo|terrain_demo|demo_2) ;;
   *)
-    echo "Invalid world '$WORLD'. Use simple_trees, large_demo, or terrain_demo." >&2
+    echo "Invalid world '$WORLD'. Use simple_trees, large_demo, terrain_demo, or demo_2." >&2
     exit 2
     ;;
 esac
@@ -342,7 +343,10 @@ fi
 POSE_ARGS=()
 [[ -n "$POSE" ]] && POSE_ARGS=(human_pose:="$POSE")
 MAP_ARGS=()
-[[ "$PRELOAD_MAP" == "true" ]] && MAP_ARGS=(height_map:="$WORLD")
+# demo_2 has terrain_demo's terrain, so it uses terrain_demo's saved map.
+MAP_WORLD="$WORLD"
+[[ "$WORLD" == "demo_2" ]] && MAP_WORLD="terrain_demo"
+[[ "$PRELOAD_MAP" == "true" ]] && MAP_ARGS=(height_map:="$MAP_WORLD")
 
 if [[ "$TRACE" == "true" ]]; then
   echo "Starting TRACE mission: world=$WORLD rviz=$RVIZ gui=$GUI human_pose=${POSE:-random} preload_map=$PRELOAD_MAP"

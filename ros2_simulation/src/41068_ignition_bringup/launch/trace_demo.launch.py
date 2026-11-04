@@ -38,7 +38,8 @@ def generate_launch_description():
 
     args = [
         DeclareLaunchArgument('world', default_value='terrain_demo',
-                              description='terrain_demo contains the heat-signature casualty'),
+                              description='terrain_demo or demo_2 (pine trees, grass) contain '
+                                          'the heat-signature casualty'),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument('human_pose', default_value='random',
                               description='Casualty spawn: random, or 0-5 to repeat a scenario'),

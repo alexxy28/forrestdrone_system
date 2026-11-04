@@ -24,7 +24,8 @@ from launch_ros.substitutions import FindPackageShare
 
 _TRUE_STRINGS = "['true', '1', 'yes', 'on']"
 
-# Candidate human poses for terrain_demo. One is chosen at random on each launch.
+# Candidate human poses for terrain_demo (and demo_2: same terrain). One is
+# chosen at random on each launch.
 _TERRAIN_DEMO_HUMAN_POSES = [
     '-15 -10 1 -1.7 0 0',
     '-15 0 0 -1.25 0 0',
@@ -80,7 +81,9 @@ def _add_gazebo_with_world_randomization(context, *_args, **_kwargs):
 
     selected_pose = None
     option_count = 0
-    if world_name == 'terrain_demo':
+    # demo_2 is terrain_demo with pine trees and grass: same terrain, same poses.
+    randomized_world = world_name in ('terrain_demo', 'demo_2')
+    if randomized_world:
         world_path, selected_pose, option_count = _randomize_terrain_human_pose(
             world_path, LaunchConfiguration('human_pose').perform(context))
 
@@ -104,11 +107,11 @@ def _add_gazebo_with_world_randomization(context, *_args, **_kwargs):
     actions = [ign_launch]
     if selected_pose is not None:
         actions.append(LogInfo(msg=(
-            f'terrain_demo: selected human pose {selected_pose} '
+            f'{world_name}: selected human pose {selected_pose} '
             f'from {option_count} options'
         )))
-    elif world_name == 'terrain_demo':
-        actions.append(LogInfo(msg='terrain_demo: could not patch human_heat1 pose in world file; using default pose'))
+    elif randomized_world:
+        actions.append(LogInfo(msg=f'{world_name}: could not patch human_heat1 pose in world file; using default pose'))
     return actions
 
 
@@ -411,7 +414,7 @@ def generate_launch_description():
         'world',
         default_value='simple_trees',
         description='Which world to load',
-        choices=['simple_trees', 'large_demo', 'terrain_demo'],
+        choices=['simple_trees', 'large_demo', 'terrain_demo', 'demo_2'],
     )
     ld.add_action(world_launch_arg)
 

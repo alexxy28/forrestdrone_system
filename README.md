@@ -66,6 +66,7 @@ Common variations:
 ./run_simulation.sh --trace --no-build             # skip colcon build
 ./run_simulation.sh --trace --second-drone         # two drones race to find the casualty
 ./run_simulation.sh --trace --second-drone --split-search   # two drones, half the area each
+./run_simulation.sh --trace --world demo_2 --second-drone   # demo 2: pine trees and grass, same mission
 ./run_simulation.sh --help                         # all options
 ```
 

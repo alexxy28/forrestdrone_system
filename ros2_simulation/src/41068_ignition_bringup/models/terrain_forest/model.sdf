@@ -1,0 +1,38 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <model name="terrain_forest">
+    <pose>0 0 0 0 0 0</pose>
+    <static>true</static>
+    <link name="body">
+      <visual name="visual">
+        <geometry>
+          <!-- terrain_1.dae with its texture coordinates x8, so Grass.png repeats
+               instead of being stretched once over the whole 41 m terrain. -->
+          <mesh><uri>model://terrain_forest/media/terrain_forest.dae</uri></mesh>
+        </geometry>
+        <material>
+          <ambient>0.6 0.6 0.6 1</ambient>
+          <diffuse>1.0 1.0 1.0 1</diffuse>
+          <specular>0.05 0.05 0.05 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://terrain_1/media/Textures/Grass.png</albedo_map>
+              <roughness>0.95</roughness>
+              <metalness>0.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+        <plugin
+          filename="ignition-gazebo-thermal-system"
+          name="gz::sim::systems::Thermal">
+          <temperature>290.0</temperature>
+        </plugin>
+      </visual>
+      <collision name="collision">
+        <geometry>
+          <mesh><uri>model://terrain_1/media/terrain_1.dae</uri></mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

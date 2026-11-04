@@ -1,0 +1,85 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <!--
+    "Pine Tree" (OpenRobotics, Gazebo Fuel, version 6, by Louise Poubel), stored
+    in the repo so demo_2 needs no internet. Changes from the Fuel model.sdf:
+      - files load from model://pine_tree/... instead of fuel.gazebosim.org
+      - collision is a solid trunk, not the whole mesh: the lowest branches are
+        0.6 m up and 1.6 m wide, so with the mesh the Husky snagged on them
+      - 290 K on both visuals, like the other trees and the terrain, so the
+        heat cameras see trees as cool ground clutter, never as a person
+    Size: 5.1 m tall, branches out to 1.6 m (the mesh is in inches, x0.0254),
+    under the drones' 7 m flight height.
+  -->
+  <model name="pine_tree">
+    <static>true</static>
+    <link name="link">
+      <collision name="trunk_collision">
+        <pose>0 0 2.5 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.2</radius>
+            <length>5.0</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <visual name="branch">
+        <geometry>
+          <mesh>
+            <uri>model://pine_tree/meshes/pine_tree.dae</uri>
+            <submesh>
+              <name>Branch</name>
+            </submesh>
+          </mesh>
+        </geometry>
+        <material>
+          <double_sided>true</double_sided>
+          <diffuse>1.0 1.0 1.0</diffuse>
+          <script>
+            <uri>model://pine_tree/materials/scripts/</uri>
+            <uri>model://pine_tree/materials/textures/</uri>
+            <name>PineTree/Branch</name>
+          </script>
+          <pbr>
+            <metal>
+              <albedo_map>model://pine_tree/materials/textures/branch_2_diffuse.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+        <plugin
+          filename="ignition-gazebo-thermal-system"
+          name="gz::sim::systems::Thermal">
+          <temperature>290.0</temperature>
+        </plugin>
+      </visual>
+      <visual name="bark">
+        <geometry>
+          <mesh>
+            <uri>model://pine_tree/meshes/pine_tree.dae</uri>
+            <submesh>
+              <name>Bark</name>
+            </submesh>
+          </mesh>
+        </geometry>
+        <material>
+          <diffuse>1.0 1.0 1.0</diffuse>
+          <script>
+            <uri>model://pine_tree/materials/scripts/</uri>
+            <uri>model://pine_tree/materials/textures/</uri>
+            <name>PineTree/Bark</name>
+          </script>
+          <pbr>
+            <metal>
+              <albedo_map>model://pine_tree/materials/textures/bark_diffuse.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+        <plugin
+          filename="ignition-gazebo-thermal-system"
+          name="gz::sim::systems::Thermal">
+          <temperature>290.0</temperature>
+        </plugin>
+      </visual>
+    </link>
+  </model>
+</sdf>
