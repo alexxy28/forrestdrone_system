@@ -17,18 +17,26 @@ LOCAL_ONLY="1"
 BUILD="true"
 CLEAN_BUILD="false"
 ROS_DOMAIN=""
-TRACE="false"
+TRACE="true"
 POSE=""
 PRELOAD_MAP="false"
-PARROT2="false"
+DASHBOARD="true"
+LOGGER="true"
+START_PAUSED="true"
+SHOW_MENU="false"
+SETUP="false"
+[[ $# -gt 0 ]] || SHOW_MENU="true"
 
 usage() {
   cat <<'EOF'
 Usage: ./run_simulation.sh [options]
 
-Build, source, and start the Forrest Drone Ignition simulation.
+Build, source, and start the full TRACE mission simulation.
+With no arguments, open the interactive menu.
 
 Options:
+      --menu            Open the interactive menu
+      --setup           Update from GitHub, install dependencies, and build
   -w, --world WORLD     World: simple_trees, large_demo, or terrain_demo
       --husky-only      Launch only the Husky
       --parrot-only     Launch only the Parrot
@@ -43,21 +51,123 @@ Options:
       --no-build        Use the existing workspace build
       --clean-build     Remove build artifacts before rebuilding
       --trace           Full TRACE mission (trace_demo.launch.py): sim, SLAM,
-                        control nodes, rqt dashboard, results logger
+                        control nodes, rqt dashboard, results logger (default)
+      --sim-only        Simulator and robots without TRACE mission nodes/dashboard
+      --no-dashboard    Disable the rqt dashboard (TRACE)
+      --no-logger       Disable mission scoring/results logging (TRACE)
+      --auto-takeoff    Start the Parrot without pressing Start Parrot (TRACE)
       --pose N          Casualty spawn 0-5 (default: random)
       --preload-map[=true|false]
                         With --trace: start from the saved terrain map for the
                         world (pre_scanned_height_maps/WORLD)
-      --second-drone    Add a second drone (/parrot2); with --trace each drone
-                        searches half the area
   -h, --help            Show this help
 
-Defaults: terrain_demo, both robots, RViz, Nav2, local-only ROS, rebuild enabled.
+Defaults: full TRACE mission, terrain_demo, both robots, RViz, Nav2,
+          local-only ROS, rebuild enabled.
 EOF
+}
+
+toggle() {
+  if [[ "${!1}" == "true" ]]; then
+    printf -v "$1" '%s' false
+  else
+    printf -v "$1" '%s' true
+  fi
+}
+
+simulation_menu() {
+  local choice value
+  while true; do
+    cat <<EOF
+
+Simulation settings (true = selected)
+  1. Full TRACE mission:                    $TRACE
+  2. Gazebo window:                         $GUI
+  3. RViz:                                  $RVIZ
+  4. Nav2 (also enables SLAM):               $NAV2
+  5. SLAM without Nav2:                      $SLAM
+  6. Load saved terrain map (TRACE):         $PRELOAD_MAP
+  7. World:                                 $WORLD
+  8. Casualty pose:                         ${POSE:-random}
+  9. Robots (sim-only): Husky=$HUSKY Parrot=$PARROT
+ 10. Build before launching:                 $BUILD
+ 11. Local-only ROS:                         $LOCAL_ONLY
+ 12. Operator dashboard (TRACE):             $DASHBOARD
+ 13. Results logger (TRACE):                 $LOGGER
+ 14. Wait for Start Parrot (TRACE):           $START_PAUSED
+  s. Start simulation
+  b. Back
+
+TRACE always runs both robots, Nav2 and SLAM.
+EOF
+    read -r -p 'Select an option: ' choice || return 1
+    case "$choice" in
+      1) toggle TRACE; [[ "$TRACE" == true ]] || PRELOAD_MAP=false ;;
+      2) toggle GUI ;;
+      3) toggle RVIZ ;;
+      4) toggle NAV2 ;;
+      5) toggle SLAM ;;
+      6)
+        if [[ "$TRACE" == true ]]; then toggle PRELOAD_MAP
+        else echo 'Saved terrain maps require the full TRACE mission.'; fi ;;
+      7)
+        read -r -p 'World (1 terrain_demo, 2 simple_trees, 3 large_demo): ' value || return 1
+        case "$value" in
+          1) WORLD=terrain_demo ;; 2) WORLD=simple_trees ;; 3) WORLD=large_demo ;;
+          *) echo 'Invalid world selection.' ;;
+        esac ;;
+      8)
+        read -r -p 'Casualty pose (0-5, or r for random): ' value || return 1
+        case "$value" in
+          [0-5]) POSE="$value" ;; r|R) POSE='' ;; *) echo 'Invalid pose.' ;;
+        esac ;;
+      9)
+        read -r -p 'Robots (1 both, 2 Husky only, 3 Parrot only): ' value || return 1
+        case "$value" in
+          1) HUSKY=true; PARROT=true ;;
+          2) HUSKY=true; PARROT=false ;;
+          3) HUSKY=false; PARROT=true ;;
+          *) echo 'Invalid robot selection.' ;;
+        esac ;;
+      10) toggle BUILD ;;
+      11) if [[ "$LOCAL_ONLY" == 1 ]]; then LOCAL_ONLY=0; else LOCAL_ONLY=1; fi ;;
+      12) toggle DASHBOARD ;;
+      13) toggle LOGGER ;;
+      14) toggle START_PAUSED ;;
+      s|S) return 0 ;;
+      b|B) return 1 ;;
+      *) echo 'Invalid selection.' ;;
+    esac
+  done
+}
+
+main_menu() {
+  local choice
+  while true; do
+    cat <<'EOF'
+
+TRACE simulation
+  1. Configure add-ons and run simulation
+  2. Update from GitHub and install/setup dependencies
+  0. Exit
+EOF
+    read -r -p 'Select an option: ' choice || exit 0
+    case "$choice" in
+      1) if simulation_menu; then return; fi ;;
+      2) SETUP=true; return ;;
+      0) exit 0 ;;
+      *) echo 'Invalid selection.' ;;
+    esac
+  done
 }
 
 while (($# > 0)); do
   case "$1" in
+    --menu) SHOW_MENU=true; shift ;;
+    --setup) SETUP=true; shift ;;
+    --no-dashboard) DASHBOARD=false; shift ;;
+    --no-logger) LOGGER=false; shift ;;
+    --auto-takeoff) START_PAUSED=false; shift ;;
     -w|--world)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; exit 2; }
       WORLD="$2"
@@ -118,6 +228,10 @@ while (($# > 0)); do
       TRACE="true"
       shift
       ;;
+    --sim-only)
+      TRACE="false"
+      shift
+      ;;
     --pose)
       [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; exit 2; }
       POSE="$2"
@@ -131,10 +245,6 @@ while (($# > 0)); do
       PRELOAD_MAP="false"
       shift
       ;;
-    --second-drone)
-      PARROT2="true"
-      shift
-      ;;
     -h|--help)
       usage
       exit 0
@@ -146,6 +256,13 @@ while (($# > 0)); do
       ;;
   esac
 done
+
+if [[ "$SHOW_MENU" == true && "$SETUP" == false ]]; then
+  main_menu
+fi
+if [[ "$SETUP" == true ]]; then
+  exec bash "$ROOT_DIR/scripts/setup_environment.sh"
+fi
 
 case "$WORLD" in
   simple_trees|large_demo|terrain_demo) ;;
@@ -217,27 +334,28 @@ MAP_ARGS=()
 [[ "$PRELOAD_MAP" == "true" ]] && MAP_ARGS=(height_map:="$WORLD")
 
 if [[ "$TRACE" == "true" ]]; then
-  echo "Starting TRACE mission: world=$WORLD rviz=$RVIZ gui=$GUI human_pose=${POSE:-random} preload_map=$PRELOAD_MAP second_drone=$PARROT2"
+  echo "Starting TRACE mission: world=$WORLD rviz=$RVIZ gui=$GUI human_pose=${POSE:-random} preload_map=$PRELOAD_MAP"
   echo "  ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}"
   # Robots, SLAM and Nav2 are fixed on inside trace_demo, so those flags are ignored here.
   exec ros2 launch 41068_ignition_bringup trace_demo.launch.py \
     world:="$WORLD" \
     rviz:="$RVIZ" \
     gui:="$GUI" \
-    parrot2:="$PARROT2" \
+    rqt:="$DASHBOARD" \
+    log_results:="$LOGGER" \
+    parrot_start_paused:="$START_PAUSED" \
     "${POSE_ARGS[@]}" \
     "${MAP_ARGS[@]}"
 fi
 
 echo "Starting simulation:"
-echo "  world=$WORLD husky=$HUSKY parrot=$PARROT parrot2=$PARROT2 rviz=$RVIZ gui=$GUI nav2=$NAV2 slam=$SLAM"
+echo "  world=$WORLD husky=$HUSKY parrot=$PARROT rviz=$RVIZ gui=$GUI nav2=$NAV2 slam=$SLAM"
 echo "  ROS_LOCALHOST_ONLY=$ROS_LOCALHOST_ONLY ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}"
 
 exec ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
   world:="$WORLD" \
   husky:="$HUSKY" \
   parrot:="$PARROT" \
-  parrot2:="$PARROT2" \
   rviz:="$RVIZ" \
     gui:="$GUI" \
   nav2:="$NAV2" \
