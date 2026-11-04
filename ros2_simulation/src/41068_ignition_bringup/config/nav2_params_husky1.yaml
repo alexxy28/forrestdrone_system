@@ -108,7 +108,7 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: true
-    controller_frequency: 10.0
+    controller_frequency: 5.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -134,11 +134,11 @@ controller_server:
       debug_trajectory_details: false
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 0.6
+      max_vel_x: 1.0
       max_vel_y: 0.0
       max_vel_theta: 1.5
       min_speed_xy: 0.0
-      max_speed_xy: 0.6
+      max_speed_xy: 1.0
       min_speed_theta: 0.0
       acc_lim_x: 2.5
       acc_lim_y: 0.0
@@ -212,7 +212,7 @@ local_costmap:
           raytrace_max_range: 20.0
           raytrace_min_range: 0.0
           obstacle_max_range: 10.0
-          obstacle_min_range: 0.05  # keep close-range tree returns so the Husky does not drive into trunks
+          obstacle_min_range: 0.05   # ignore hits right at the robot (ground when pitched)
       static_layer:
         plugin: nav2_costmap_2d::StaticLayer
         map_subscribe_transient_local: true
@@ -254,7 +254,7 @@ global_costmap:
           raytrace_max_range: 20.0
           raytrace_min_range: 0.0
           obstacle_max_range: 10.0
-          obstacle_min_range: 0.05  # keep close-range tree returns so the Husky does not drive into trunks
+          obstacle_min_range: 0.05   # ignore hits right at the robot (ground when pitched)
       static_layer:
         plugin: nav2_costmap_2d::StaticLayer
         map_subscribe_transient_local: true
