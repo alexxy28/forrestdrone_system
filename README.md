@@ -157,6 +157,31 @@ To confirm or reject from a terminal instead (`false` rejects):
 ros2 topic pub --once --qos-durability transient_local /CasulityConfirmed std_msgs/msg/Bool "{data: true}"
 ```
 
+### Hardware operator box (Arduino Nano)
+
+An optional physical E-STOP, motion sensor and status light, for the operator's desk
+(`arduino/trace_estop/trace_estop.ino` + `arduino_bridge.py`).
+
+| Part | Pin | Does |
+| --- | --- | --- |
+| Button (to GND) | A4 | Press: **stops every robot**, every time. Hold 1 s while stopped: **starts them all again** |
+| IR motion sensor (OUT) | A2 | Movement **stops the robots** and flashes the green LED fast. Start is refused while it still sees movement |
+| Green LED (220 Ω to GND) | A3 | Fast flash: stopped by the IR sensor. Slow blink: **mission complete**, Husky and drones at the person |
+| Built-in LED | 13 | On while stopped |
+
+The bridge publishes the same topics as the dashboard's Stop/Start buttons, so the
+dashboard buttons flip by themselves. Upload the sketch with the Arduino IDE (board:
+Arduino Nano, processor ATmega328P, or "Old Bootloader" for most clones), then, with the
+mission running:
+
+```bash
+sudo apt install python3-serial && sudo usermod -aG dialout $USER   # once, then log out and in
+ros2 run 41068_ignition_bringup arduino_bridge.py --ros-args -p port:=/dev/ttyUSB0
+```
+
+Add `-p ir_enabled:=false` to ignore the IR sensor, or `-p ir_stops_husky:=false` to stop
+only the drones on movement. A PIR sensor needs about 30 s after power-up before it is used.
+
 ## How it works
 
 ```

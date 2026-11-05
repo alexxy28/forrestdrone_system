@@ -28,6 +28,7 @@ install(
     scripts/basic_autonomy_demo.py
     scripts/thermal_view.py
     scripts/mission_logger.py
+    scripts/arduino_bridge.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
