@@ -123,6 +123,10 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._drone_target_wp: tuple[float, float] | None = None
         self._husky_path: list[tuple[float, float]] = []
         self._drone_path: list[tuple[float, float]] = []
+
+        # Second drone (/parrot2), only drawn once it publishes
+        self._drone2_pos: tuple[float, float] | None = None
+        self._drone2_path: list[tuple[float, float]] = []
         
         # Mission (TRACE) overlays
         self._mission_route: list[tuple[float, float]] = []
@@ -153,6 +157,8 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._husky_wp_sub = None
         self._drone_plan_sub = None
         self._drone_wp_sub = None
+        self._drone2_odom_sub = None
+        self._drone2_plan_sub = None
 
         # Main UI refresh loop (10 FPS)
         self._timer = QTimer(self)
@@ -233,6 +239,12 @@ class TerrainMapWidget(QtWidgets.QWidget):
         self._drone_plan_sub = self._node.create_subscription(
             Path, '/parrot1/mission/path', self._drone_plan_cb, LATCHED)
 
+        # Second drone: nothing arrives on these unless it was launched (parrot2:=true).
+        self._drone2_odom_sub = self._node.create_subscription(
+            Odometry, '/parrot2/odometry', self._drone2_odom_cb, 10)
+        self._drone2_plan_sub = self._node.create_subscription(
+            Path, '/parrot2/mission/path', self._drone2_plan_cb, LATCHED)
+
         # Mission overlays: terrain-aware A* route, confirmed casualty, state.
         for sub in self._mission_subs:
             try:
@@ -268,6 +280,12 @@ class TerrainMapWidget(QtWidgets.QWidget):
 
     def _drone_odom_cb(self, msg: Odometry) -> None:
         self._drone_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def _drone2_odom_cb(self, msg: Odometry) -> None:
+        self._drone2_pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def _drone2_plan_cb(self, msg: Path) -> None:
+        self._drone2_path = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
 
     def _husky_plan_cb(self, msg: Path) -> None:
         self._husky_path = [(p.pose.position.x, p.pose.position.y) for p in msg.poses]
@@ -306,6 +324,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         if self._node is not None:
             subs = [self._subscription, self._husky_odom_sub, self._drone_odom_sub, 
                     self._husky_plan_sub, self._husky_wp_sub, self._drone_plan_sub, self._drone_wp_sub,
+                    self._drone2_odom_sub, self._drone2_plan_sub,
                     *self._mission_subs]
             for sub in subs:
                 if sub is not None:
@@ -553,6 +572,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         # Husky trajectory = Cyan, Drone trajectory = Pink
         draw_trajectory(self._husky_pos, self._husky_path, self._husky_target_wp, 'cyan')
         draw_trajectory(self._drone_pos, self._drone_path, self._drone_target_wp, 'pink')
+        draw_trajectory(self._drone2_pos, self._drone2_path, None, 'white')
 
         # Terrain-aware A* route (solid yellow) with its waypoints.
         if len(self._mission_route) >= 1:
@@ -582,6 +602,7 @@ class TerrainMapWidget(QtWidgets.QWidget):
         # Draw robot markers (Husky = Blue, Drone = Magenta)
         draw_robot_marker(self._husky_pos, 'blue')
         draw_robot_marker(self._drone_pos, 'magenta')
+        draw_robot_marker(self._drone2_pos, 'white')
 
         # ---------------------------------------------------------------------
         # TEXT OVERLAYS (Status, Stats, Legend)
@@ -629,7 +650,9 @@ class TerrainMapWidget(QtWidgets.QWidget):
             
         # Draw Legends at the bottom of the widget
         painter.drawText(8, self.height() - 26, 'yellow = A* route   orange = detection   red X = casualty')
-        painter.drawText(8, self.height() - 8, 'blue = Husky   magenta = drone')
+        painter.drawText(8, self.height() - 8,
+                         'blue = Husky   magenta = drone' +
+                         ('   white = drone 2' if self._drone2_pos is not None else ''))
         
         # Finalize drawing
         painter.end()
@@ -682,8 +705,15 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         
         # True = robot running (button reads "Stop"). The drone starts PAUSED in
         # the TRACE demo; _parrot_status_cb corrects this if it is already flying.
-        self._robot_states = {'husky1': True, 'parrot1': False}
+        self._robot_states = {'husky1': True, 'parrot1': False, 'parrot2': False}
         self._parrot_started = False   # operator has pressed Start Parrot at least once
+
+        # Second drone: its button and status line only appear once /parrot2
+        # reports a status, so the one-drone dashboard looks exactly as before.
+        self._parrot2_status_sub = None
+        self._parrot2_present = False
+        self._parrot2_status = 'unknown'
+        self._parrot2_started = False
         
         # Update UI text dynamically at 5 FPS
         self._ui_timer = QTimer(self)
@@ -701,6 +731,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             Bool, self._discovered_topic, self._discovered_cb, LATCHED)
         self._parrot_status_sub = self._node.create_subscription(
             String, '/parrot1/mission/status', self._parrot_status_cb, LATCHED)
+        self._parrot2_status_sub = self._node.create_subscription(
+            String, '/parrot2/mission/status', self._parrot2_status_cb, LATCHED)
             
         # Mission state, so the panel never shows a stale message.
         self._mission_subs = [
@@ -741,7 +773,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             self._waypoint_publisher = None
 
         for subscription in [*self._subscriptions.values(), *self._mission_subs,
-                             self._discovered_sub, self._parrot_status_sub]:
+                             self._discovered_sub, self._parrot_status_sub,
+                             self._parrot2_status_sub]:
             if subscription is None:
                 continue
             try:
@@ -792,6 +825,17 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         self._parrot_button = QtWidgets.QPushButton('Stop Parrot')
         self._parrot_button.clicked.connect(lambda: self._toggle_robot('parrot1'))
         layout.addWidget(self._parrot_button)
+
+        self._parrot2_button = QtWidgets.QPushButton('Start Parrot 2')
+        self._parrot2_button.clicked.connect(lambda: self._toggle_robot('parrot2'))
+        self._parrot2_button.setVisible(False)   # shown once the second drone reports in
+        layout.addWidget(self._parrot2_button)
+
+        # Two drones: take off at the same moment, so the search is a fair race.
+        self._start_both_button = QtWidgets.QPushButton('Start both drones')
+        self._start_both_button.clicked.connect(self._start_both_drones)
+        self._start_both_button.setVisible(False)
+        layout.addWidget(self._start_both_button)
 
         # General Mission Status Block
         self._mission_label = QtWidgets.QLabel('Mission: waiting for mission control...')
@@ -857,6 +901,13 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         if not self._parrot_started and msg.data in ('CLIMBING', 'IDLE', 'SEARCHING', 'HOLDING'):
             self._robot_states['parrot1'] = True
             self._parrot_started = True
+
+    def _parrot2_status_cb(self, msg: String) -> None:
+        self._parrot2_status = msg.data
+        self._parrot2_present = True
+        if not self._parrot2_started and msg.data in ('CLIMBING', 'IDLE', 'SEARCHING', 'HOLDING'):
+            self._robot_states['parrot2'] = True
+            self._parrot2_started = True
 
     def _mission_state_cb(self, msg: String) -> None:
         if msg.data != self._mission_state and self._mission_state != 'unknown':
@@ -964,7 +1015,12 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
                       else ' (flying to overwatch near the casualty)')
         elif not self._parrot_started:
             drone += ' (on the ground: press Start Parrot to begin the search)'
-        lines.append(f'<b>Drone:</b> {drone}')
+        lines.append(f'<b>Drone{" 1" if self._parrot2_present else ""}:</b> {drone}')
+        if self._parrot2_present:
+            drone2 = self._parrot2_status
+            if not self._parrot2_started:
+                drone2 += ' (on the ground: press Start Parrot 2)'
+            lines.append(f'<b>Drone 2:</b> {drone2}')
         
         husky = self._husky_status
         if self._casualty is not None and self._husky_pos is not None:
@@ -1008,7 +1064,28 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
         
         # Update the Stop/Start buttons based on current estop bools
         self._husky_button.setText('Stop Husky' if self._robot_states.get('husky1', False) else 'Start Husky')
-        self._parrot_button.setText('Stop Parrot' if self._robot_states.get('parrot1', False) else 'Start Parrot')
+        number = ' 1' if self._parrot2_present else ''
+        self._parrot_button.setText(('Stop Parrot' if self._robot_states.get('parrot1', False)
+                                     else 'Start Parrot') + number)
+        self._parrot2_button.setVisible(self._parrot2_present)
+        self._start_both_button.setVisible(
+            self._parrot2_present and not self._parrot_started and not self._parrot2_started)
+        self._parrot2_button.setText('Stop Parrot 2' if self._robot_states.get('parrot2', False)
+                                     else 'Start Parrot 2')
+
+    def _start_both_drones(self) -> None:
+        """Starts parrot1 and parrot2 together (both publish False on /estop)."""
+        if self._node is None:
+            self._status.setText('ROS node is not connected yet.')
+            return
+        for robot_name in ('parrot1', 'parrot2'):
+            self._ensure_subscription(robot_name)
+            self._publish_stop_state(robot_name, False)
+            self._robot_states[robot_name] = True
+        self._parrot_started = True
+        self._parrot2_started = True
+        self._status.setText('Both drones started.')
+        self._update_labels()
 
     def _toggle_robot(self, robot_name: str) -> None:
         """Flips the boolean published to the specified robot's /estop topic."""
@@ -1032,6 +1109,8 @@ class RobotMotionToggleWidget(QtWidgets.QWidget):
             self._robot_states[clean_name] = True
             if clean_name == 'parrot1':
                 self._parrot_started = True
+            if clean_name == 'parrot2':
+                self._parrot2_started = True
 
         self._update_labels()
 

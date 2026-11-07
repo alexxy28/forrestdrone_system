@@ -39,6 +39,10 @@ void onStop(const std_msgs::msg::Bool::SharedPtr msg);
 void onCasualtyConfirmed(const std_msgs::msg::Bool::SharedPtr msg);
 void startCasualtyReview(const Casualty& casualty);
 void trimPatrolWaypointsAlreadyPassed();
+void onCandidate(const geometry_msgs::msg::PointStamped::SharedPtr msg);
+void publishCandidate(const Casualty& casualty);
+void dismissResightings();
+void guardCasualty(double casualtyX, double casualtyY);
 
 Parrot parrot_;
 ThermalCamera thermalCamera_;
@@ -65,6 +69,28 @@ bool casualtyConfirmed_{false};
 bool casualtyOrbitActive_{false};
 std::vector<std::pair<double, double>> patrolWaypoints_;
 bool patrolMissionActive_{false};
+
+// ---- more than one drone (multi_drone:=true) ----
+// All drones share one operator review (the dashboard shows one detection at
+// a time and its Confirm/Reject answers on one topic). So only one drone asks
+// at a time, and a drone only acts on an answer to its own detection.
+bool multiDrone_{false};
+bool otherReviewPending_{false};     // another drone's detection is on the dashboard, unanswered
+bool lastCandidateWasMine_{false};   // the detection last shown to the operator is ours
+std::optional<std::pair<double, double>> myLastCandidate_;
+rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr candidateSub_;
+
+// guard_casualty: after circling a casualty it found, the drone stays over it
+// instead of going back to its search (the other drone carries on searching).
+bool guardCasualty_{false};
+// same_casualty_radius_m: a new detection this close to one the operator
+// rejected, or to a casualty any drone confirmed, is the same thing seen again
+// from another angle: don't stop and ask about it. 0 = off.
+double sameCasualtyRadiusM_{0.0};
+std::vector<std::pair<double, double>> confirmedByAnyDrone_;
+std::vector<std::pair<double, double>> rejectedByOtherDrones_;
+std::optional<std::pair<double, double>> lastOtherCandidate_;   // last detection another drone asked about
+rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr confirmedCasualtySub_;
 };
 
 #endif

@@ -24,7 +24,8 @@ from launch_ros.substitutions import FindPackageShare
 
 _TRUE_STRINGS = "['true', '1', 'yes', 'on']"
 
-# Candidate human poses for terrain_demo. One is chosen at random on each launch.
+# Candidate human poses for terrain_demo (and demo_2: same terrain). One is
+# chosen at random on each launch.
 _TERRAIN_DEMO_HUMAN_POSES = [
     '-15 -10 1 -1.7 0 0',
     '-15 0 0 -1.25 0 0',
@@ -396,6 +397,16 @@ def generate_launch_description():
     )
     ld.add_action(parrot_launch_arg)
 
+    # Second drone (eva-second-drone branch). Same airframe as parrot1, its own
+    # namespace /parrot2. No SLAM, Nav2 or RViz for it: parrot_node flies it
+    # directly and terrain_map_node maps with its LiDAR, so those would only
+    # cost CPU.
+    ld.add_action(DeclareLaunchArgument(
+        'parrot2',
+        default_value='False',
+        description='Also launch a second Parrot drone in namespace /parrot2',
+    ))
+
     ld.add_action(DeclareLaunchArgument(
         'human_pose',
         default_value='random',
@@ -482,6 +493,29 @@ def generate_launch_description():
         y='0.0',
         z='0.8',
         spawn_delay=6.0,
+    )
+
+    add_robot(
+        ld,
+        pkg_path=pkg_path,
+        config_path=config_path,
+        use_sim_time=use_sim_time,
+        enabled_arg='parrot2',
+        namespace='parrot2',
+        frame_prefix='parrot2_',
+        gz_model_name='parrot2',
+        xacro_parts=['urdf_parrot', 'parrot.urdf.xacro'],
+        bridge_config='gazebo_bridge_parrot2.yaml',
+        localization_config='robot_localization_parrot2.yaml',
+        # Flat ground (0.10 m) beside the Husky, 4.4 m from the nearest tree
+        # (trees push a drone away inside 4 m). The first spot, (2, 3), was on
+        # a slope (0.33 m) with a tree 2.5 m away: parked drones sink while
+        # waiting for Start, so parrot2 ended up in the hill, then was pushed
+        # around by the tree.
+        x='0.0',
+        y='2.0',
+        z='0.8',
+        spawn_delay=8.0,
     )
 
     add_navigation_instance(

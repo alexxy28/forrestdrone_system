@@ -56,6 +56,27 @@ public:
         RCLCPP_INFO(get_logger(), "Terrain accumulation started: %s + %s -> %s in frame %s",
                     topics::PARROT_SCAN, topics::PARROT_ODOM, topics::PARROT_TERRAIN,
                     mapFrame_.c_str());
+
+        // Second drone: its down LiDAR goes into the same map. Its raw odometry
+        // is in world coordinates too (frame parrot2_odom), like parrot1's.
+        if (declare_parameter<bool>("second_drone", false)) {
+            odom2Sub_ = create_subscription<nav_msgs::msg::Odometry>(
+                topics::PARROT2_ODOM, rclcpp::SensorDataQoS(),
+                [this](nav_msgs::msg::Odometry::SharedPtr msg) { odom2_ = msg; });
+            scan2Sub_ = create_subscription<PointCloud2>(
+                topics::PARROT2_SCAN, rclcpp::SensorDataQoS(),
+                [this](const PointCloud2::SharedPtr msg) {
+                    // Only once parrot2 is up flying: parked on the ground it sinks
+                    // into the terrain, and its LiDAR then reports heights that
+                    // aren't there (rings of fake slopes around it on the map).
+                    if (!odom2_ || odom2_->pose.pose.position.z < SECOND_DRONE_MIN_MAP_Z_M) {
+                        return;
+                    }
+                    addScan(*msg, odom2_, "parrot2_odom", "parrot2_");
+                });
+            RCLCPP_INFO(get_logger(), "Second drone: also mapping %s + %s",
+                        topics::PARROT2_SCAN, topics::PARROT2_ODOM);
+        }
     }
 
 private:
@@ -122,18 +143,37 @@ private:
 
     void scanCallback(const PointCloud2::SharedPtr msg)
     {
-        if (!odom_) {
+        addScan(*msg, odom_, mapFrame_, "");
+    }
+
+    // Both drones are the same airframe, so parrot2's LiDAR mount is read from
+    // parrot1's static TF (this node only listens to /parrot1/tf_static):
+    // "parrot2_base_link" -> "parrot1_base_link", and so on.
+    static std::string asParrot1Frame(const std::string &frame, const std::string &prefix)
+    {
+        if (prefix.empty() || frame.rfind(prefix, 0) != 0)
+            return frame;
+        return "parrot1_" + frame.substr(prefix.size());
+    }
+
+    // odom: that drone's latest raw odometry. odomFrame: the frame it must be in
+    // (world coordinates). prefix: "" for parrot1, "parrot2_" for the second drone.
+    void addScan(const PointCloud2 &cloud, const nav_msgs::msg::Odometry::SharedPtr &odom,
+                 const std::string &odomFrame, const std::string &prefix)
+    {
+        const PointCloud2 *msg = &cloud;
+        if (!odom) {
             RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000,
                                  "Dropping LiDAR cloud: waiting for raw Parrot odometry");
             return;
         }
-        if (odom_->header.frame_id != mapFrame_) {
+        if (odom->header.frame_id != odomFrame) {
             RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 5000,
-                                  "Dropping LiDAR cloud: odometry frame '%s' is not map frame '%s'",
-                                  odom_->header.frame_id.c_str(), mapFrame_.c_str());
+                                  "Dropping LiDAR cloud: odometry frame '%s' is not '%s'",
+                                  odom->header.frame_id.c_str(), odomFrame.c_str());
             return;
         }
-        if (std::abs((rclcpp::Time(odom_->header.stamp) - rclcpp::Time(msg->header.stamp)).seconds())
+        if (std::abs((rclcpp::Time(odom->header.stamp) - rclcpp::Time(msg->header.stamp)).seconds())
             > MAX_ODOM_SCAN_SKEW_S) {
             RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000,
                                  "Dropping LiDAR cloud: odometry is more than %.2f s from the scan",
@@ -146,16 +186,17 @@ private:
         // which would add altitude and attitude error to every cell height.
         geometry_msgs::msg::TransformStamped mount;
         try {
-            mount = tfBuffer_.lookupTransform(odom_->child_frame_id, msg->header.frame_id,
+            mount = tfBuffer_.lookupTransform(asParrot1Frame(odom->child_frame_id, prefix),
+                                              asParrot1Frame(msg->header.frame_id, prefix),
                                               tf2::TimePointZero);
         } catch (const tf2::TransformException &e) {
             RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000,
                                  "Dropping LiDAR cloud: static transform %s -> %s unavailable: %s",
-                                 msg->header.frame_id.c_str(), odom_->child_frame_id.c_str(), e.what());
+                                 msg->header.frame_id.c_str(), odom->child_frame_id.c_str(), e.what());
             return;
         }
 
-        const auto &p = odom_->pose.pose;
+        const auto &p = odom->pose.pose;
         const auto &m = mount.transform;
         const tf2::Transform mapFromBase(
             tf2::Quaternion(p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w),
@@ -180,6 +221,11 @@ private:
             map_.addPoint(v.x(), v.y(), v.z());
         accepted_ += points.size();
 
+        // Republish on parrot1's scans only. parrot2's scans are in the map
+        // too, but publishing on both doubled the rate (20 Hz) and the
+        // dashboard, which redraws the whole map on every message, lagged.
+        if (!prefix.empty())
+            return;
         terrainPub_->publish(map_.toCloud(mapFrame_, msg->header.stamp));
 
         if ((now() - lastStats_).seconds() >= STATS_PERIOD_S) {
@@ -202,6 +248,11 @@ private:
     rclcpp::Publisher<PointCloud2>::SharedPtr terrainPub_;
 
     nav_msgs::msg::Odometry::SharedPtr odom_;
+    // second drone
+    static constexpr double SECOND_DRONE_MIN_MAP_Z_M = 2.0;   // flies at target_altitude above ground
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom2Sub_;
+    rclcpp::Subscription<PointCloud2>::SharedPtr scan2Sub_;
+    nav_msgs::msg::Odometry::SharedPtr odom2_;
     rclcpp::Time lastStats_{0, 0, RCL_ROS_TIME};
     size_t accepted_{0};
     size_t rejected_{0};

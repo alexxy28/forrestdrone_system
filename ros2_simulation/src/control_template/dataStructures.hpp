@@ -39,6 +39,10 @@ inline constexpr char UI_HUSKY_ESTOP[]  = "/mission_control/husky1/estop";   // 
 inline constexpr char UI_PARROT_ESTOP[] = "/mission_control/parrot1/estop";  // std_msgs/Bool, UI -> control
 inline constexpr char HUSKY_ESTOP[]     = "/husky1/estop";    // std_msgs/Bool, control -> husky (and UI label)
 inline constexpr char PARROT_ESTOP[]    = "/parrot1/estop";   // std_msgs/Bool, control -> parrot
+// Second drone (second_drone:=true). The dashboard's Stop/Start Parrot button
+// drives both drones; this UI topic stops/starts parrot2 on its own.
+inline constexpr char UI_PARROT2_ESTOP[] = "/mission_control/parrot2/estop";  // std_msgs/Bool, UI/terminal -> control
+inline constexpr char PARROT2_ESTOP[]    = "/parrot2/estop";   // std_msgs/Bool, control -> parrot2
 
 // Parrot: provided by the simulator and its helper nodes.
 // Raw odometry is in world coordinates; the EKF output (/parrot1/odom) sits metres off in x/y.
@@ -51,6 +55,12 @@ inline constexpr char PARROT_TF[]        = "/parrot1/tf";            // tf2_msgs
 inline constexpr char PARROT_TF_STATIC[] = "/parrot1/tf_static";     // tf2_msgs/TFMessage, sim -> terrain_map
 inline constexpr char PARROT_THERMAL[] = "/parrot1/thermal_camera";  // sensor_msgs/Image, sim -> parrot
 inline constexpr char PARROT_DEPTH[]   = "/parrot1/camera/depth/image";  // sensor_msgs/Image, sim -> parrot
+
+// Second drone: same airframe, raw odometry also in world coordinates (frame parrot2_odom).
+inline constexpr char PARROT2_ODOM[] = "/parrot2/odometry";     // nav_msgs/Odometry, sim -> terrain_map
+inline constexpr char PARROT2_SCAN[] = "/parrot2/scan/points";  // sensor_msgs/PointCloud2, sim -> terrain_map
+inline constexpr char PARROT2_MISSION_PATH[]   = "/parrot2/mission/path";    // nav_msgs/Path, control -> parrot2
+inline constexpr char PARROT2_MISSION_STATUS[] = "/parrot2/mission/status";  // std_msgs/String, parrot2 -> control
 
 // Husky: provided by the simulator and Nav2.
 inline constexpr char HUSKY_ODOM[]      = "/husky1/odometry";          // nav_msgs/Odometry, raw Gazebo (world frame), sim -> control + husky

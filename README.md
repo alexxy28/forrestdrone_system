@@ -66,8 +66,17 @@ Common variations:
 ./run_simulation.sh --trace --preload-map          # start from the saved terrain map
 ./run_simulation.sh --trace --no-gui --no-rviz     # lighter: no Gazebo window, no RViz
 ./run_simulation.sh --trace --no-build             # skip colcon build
+./run_simulation.sh --trace --second-drone         # two drones race to find the casualty
+./run_simulation.sh --trace --second-drone --split-search   # two drones, half the area each
+./run_simulation.sh --trace --world demo_2 --second-drone   # demo 2: pine trees and grass, same mission
 ./run_simulation.sh --help                         # all options
 ```
+
+With `--second-drone` a second Parrot (`/parrot2`) joins the search. Press **Start both drones**
+on the dashboard to launch them together; each drone also has its own Stop/Start button. Both
+search the whole area on different paths, and whichever finds the casualty first asks for
+review (one review at a time). The finder then stays over the casualty, the other drone maps
+the Husky's route and follows the Husky in, and both end up holding at the casualty.
 
 The full TRACE mission is the default; `--trace` can also select it explicitly.
 With `--sim-only`, the script starts only the simulator and the robots, with Nav2 and
@@ -150,6 +159,31 @@ To confirm or reject from a terminal instead (`false` rejects):
 ros2 topic pub --once --qos-durability transient_local /CasulityConfirmed std_msgs/msg/Bool "{data: true}"
 ```
 
+### Hardware operator box (Arduino Nano)
+
+An optional physical E-STOP, motion sensor and status light, for the operator's desk
+(`arduino/trace_estop/trace_estop.ino` + `arduino_bridge.py`).
+
+| Part | Pin | Does |
+| --- | --- | --- |
+| Button (to GND) | A4 | Press: **stops every robot**, every time. Hold 1 s while stopped: **starts them all again** |
+| IR motion sensor (OUT) | A2 | Movement **stops the robots** and flashes the green LED fast. Start is refused while it still sees movement |
+| Green LED (220 Ω to GND) | A3 | Fast flash: stopped by the IR sensor. Slow blink: **mission complete**, Husky and drones at the person |
+| Built-in LED | 13 | On while stopped |
+
+The bridge publishes the same topics as the dashboard's Stop/Start buttons, so the
+dashboard buttons flip by themselves. Upload the sketch with the Arduino IDE (board:
+Arduino Nano, processor ATmega328P, or "Old Bootloader" for most clones), then, with the
+mission running:
+
+```bash
+sudo apt install python3-serial && sudo usermod -aG dialout $USER   # once, then log out and in
+ros2 run 41068_ignition_bringup arduino_bridge.py --ros-args -p port:=/dev/ttyUSB0
+```
+
+Add `-p ir_enabled:=false` to ignore the IR sensor, or `-p ir_stops_husky:=false` to stop
+only the drones on movement. A PIR sensor needs about 30 s after power-up before it is used.
+
 ## How it works
 
 ```
@@ -227,7 +261,7 @@ ros2_simulation/src/
 - **Unreachable casualty:** `./run_simulation.sh --trace --pose 6` puts the person on top of
   the 10.6 m rock north of the start (walls 45-80 deg; the Husky's limit is 25 deg).
   Expected: one terrain survey, then mission FAILED "unreachable by ground". The Husky is
-  never sent, the drone keeps watch over the person, and the dashboard says why.
+  never sent, the drones keep watch over the person, and the dashboard says why.
 - **Whole mission on the real terrain, without Gazebo:** `tools/terrain_mission_test.py`
   runs poses 0-6 against the terrain_1 heights with a fake drone and Husky, and prints a
   pass/fail table. Offline the exact heights close the crease on the way to pose 2, so pose
@@ -241,10 +275,11 @@ ros2_simulation/src/
 | Test | Question | Run | Pass |
 |---|---|---|---|
 | T1 Baseline | Does one drone find the person, and the Husky reach them, at every reachable spot? | `--trace --pose N`, N = 0-5 | DONE, stop <= 3 m from the body, Husky still for 120 s |
-| T2 Forest | Does dense pine canopy hide the person? | T1 with `--world demo_2` | Same success; compare search time and detection error |
-| T3 Unreachable | Does the system recognise a person the Husky can't reach? | `--pose 6`, both worlds | FAILED_UNREACHABLE, Husky not sent, drone on overwatch |
-| T4 Warm animal | Is the warm animal at (-4, 4) never reported as a person? | Any run (the drone flies over it) | No detection there |
-| T5 Stop buttons | Do the robots stop and resume safely? | Stop Husky mid-route, then Start | Husky stops, resumes, mission DONE |
+| T2 Second drone | Does a second drone find the person sooner? | T1 with `--second-drone` (and `--split-search`) | Same success as T1, lower search time |
+| T3 Forest | Does dense pine canopy hide the person? | T1 and T2 with `--world demo_2` | Same success; compare search time and detection error |
+| T4 Unreachable | Does the system recognise a person the Husky can't reach? | `--pose 6`, 1 and 2 drones | FAILED_UNREACHABLE, Husky not sent, drones on overwatch |
+| T5 Warm animal | Is the warm animal at (-4, 4) never reported as a person? | Any run (the drones fly over it) | No detection there |
+| T6 Stop buttons | Do the robots stop and resume safely? | Stop Husky mid-route, then Start | Husky stops, resumes, mission DONE |
 
 `terrain_demo` has six casualty poses: (-15, -10), (-15, 0), (-15, 15), (12, 15),
 (12, -5) and (2.4, 12.6). Select one with `--pose 0` to `--pose 5`.

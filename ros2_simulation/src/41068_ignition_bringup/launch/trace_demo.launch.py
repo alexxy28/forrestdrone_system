@@ -17,6 +17,7 @@ Starts, in order:
 Useful arguments: world:=terrain_demo rviz:=true rqt:=true auto_start:=true gui:=true
                   control_delay:=20.0 human_pose:=0..6 log_results:=true
                   hold_check_s:=120 parrot_start_paused:=true
+                  parrot2:=true  (second drone; drone_search:=race or split)
 """
 
 from launch import LaunchDescription
@@ -37,7 +38,8 @@ def generate_launch_description():
 
     args = [
         DeclareLaunchArgument('world', default_value='terrain_demo',
-                              description='terrain_demo contains the heat-signature casualty'),
+                              description='terrain_demo or demo_2 (pine trees, grass) contain '
+                                          'the heat-signature casualty'),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument('human_pose', default_value='random',
                               description='Casualty spawn: random, or 0-5 to repeat a scenario, 6 = on the '
@@ -51,6 +53,11 @@ def generate_launch_description():
         DeclareLaunchArgument('parrot_start_paused', default_value='true',
                               description='Drone waits on the ground until Start Parrot '
                                           'is pressed on the dashboard'),
+        DeclareLaunchArgument('parrot2', default_value='false',
+                              description='Add a second drone (/parrot2)'),
+        DeclareLaunchArgument('drone_search', default_value='race',
+                              description='With parrot2: race = both drones search the whole '
+                                          'area on different paths, split = each searches half'),
         DeclareLaunchArgument('control_delay', default_value='20.0',
                               description='Seconds to wait for Gazebo/Nav2 before the mission nodes'),
         DeclareLaunchArgument('hold_check_s', default_value='120.0',
@@ -67,6 +74,7 @@ def generate_launch_description():
             'world': LaunchConfiguration('world'),
             'husky': 'true',
             'parrot': 'true',
+            'parrot2': LaunchConfiguration('parrot2'),
             'slam': 'true',
             'nav2': 'true',          # Husky Nav2 only; parrot_nav2 defaults to false
             'rviz': LaunchConfiguration('rviz'),
@@ -82,6 +90,8 @@ def generate_launch_description():
             launch_arguments={
                 'auto_start': LaunchConfiguration('auto_start'),
                 'parrot_start_paused': LaunchConfiguration('parrot_start_paused'),
+                'parrot2': LaunchConfiguration('parrot2'),
+                'drone_search': LaunchConfiguration('drone_search'),
             }.items(),
         )],
     )
@@ -90,6 +100,7 @@ def generate_launch_description():
         period=LaunchConfiguration('control_delay'),
         actions=[IncludeLaunchDescription(
             launch_file('41068_rqt_dashboard.launch.py'),
+            launch_arguments={'parrot2': LaunchConfiguration('parrot2')}.items(),
             condition=IfCondition(LaunchConfiguration('rqt')),
         )],
     )
@@ -105,7 +116,10 @@ def generate_launch_description():
                      'human_pose': ParameterValue(LaunchConfiguration('human_pose'),
                                                   value_type=str),
                      'hold_check_s': ParameterValue(LaunchConfiguration('hold_check_s'),
-                                                    value_type=float)}],
+                                                    value_type=float),
+                     # test conditions, saved with each result row
+                     'parrot2': ParameterValue(LaunchConfiguration('parrot2'), value_type=str),
+                     'drone_search': LaunchConfiguration('drone_search')}],
         condition=IfCondition(LaunchConfiguration('log_results')),
     )
 
