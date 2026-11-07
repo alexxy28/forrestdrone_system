@@ -5,6 +5,7 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE="$ROOT_DIR/ros2_simulation"
 ROS_SETUP="${ROS_SETUP:-/opt/ros/humble/setup.bash}"
+ORIGINAL_ARGS=("$@")
 
 WORLD="terrain_demo"
 HUSKY="true"
@@ -35,6 +36,10 @@ Usage: ./run_simulation.sh [options]
 
 Build, source, and start the full TRACE mission simulation.
 With no arguments, open the interactive menu.
+When downloaded on its own, this script first clones the project over HTTPS.
+The default destination is ~/git/forrestdrone_system; set TRACE_INSTALL_DIR
+to choose another directory. Internet access and Git are required (on Ubuntu,
+missing Git is installed automatically using apt-get).
 
 Options:
       --menu            Open the interactive menu
@@ -45,6 +50,8 @@ Options:
       --parrot-only     Launch only the Parrot
       --no-rviz         Do not launch RViz
       --no-gui          Run Gazebo headless (server only, less CPU)
+      --headless        Disable Gazebo, RViz and dashboard windows; start the
+                        drone automatically (TRACE)
       --nav2            Enable Nav2
       --no-nav2         Disable Nav2
       --slam            Enable SLAM Toolbox
@@ -204,6 +211,13 @@ while (($# > 0)); do
       GUI="false"
       shift
       ;;
+    --headless)
+      GUI="false"
+      RVIZ="false"
+      DASHBOARD="false"
+      START_PAUSED="false"
+      shift
+      ;;
     --nav2)
       NAV2="true"
       shift
@@ -270,6 +284,30 @@ while (($# > 0)); do
   esac
 done
 
+if [[ ! -d "$WORKSPACE/src" || ! -f "$ROOT_DIR/scripts/setup_environment.sh" ]]; then
+  REPO_URL="https://github.com/alexxy28/forrestdrone_system.git"
+  INSTALL_DIR="${TRACE_INSTALL_DIR:-$HOME/git/forrestdrone_system}"
+  if [[ -e "$INSTALL_DIR" || -L "$INSTALL_DIR" ]]; then
+    echo "Cannot download the project: destination already exists: $INSTALL_DIR" >&2
+    echo "Run its run_simulation.sh, or set TRACE_INSTALL_DIR to a new directory." >&2
+    exit 1
+  fi
+  if ! command -v git >/dev/null; then
+    if ! command -v apt-get >/dev/null; then
+      echo 'Install Git, then run this script again.' >&2
+      exit 1
+    fi
+    SUDO=()
+    if [[ "$EUID" -ne 0 ]]; then SUDO=(sudo); fi
+    "${SUDO[@]}" apt-get update
+    "${SUDO[@]}" apt-get install -y git ca-certificates
+  fi
+  mkdir -p "$(dirname "$INSTALL_DIR")"
+  echo "Downloading TRACE to $INSTALL_DIR..."
+  git clone -- "$REPO_URL" "$INSTALL_DIR"
+  exec bash "$INSTALL_DIR/run_simulation.sh" "${ORIGINAL_ARGS[@]}"
+fi
+
 if [[ "$SHOW_MENU" == true && "$SETUP" == false ]]; then
   main_menu
 fi
@@ -285,8 +323,16 @@ case "$WORLD" in
     ;;
 esac
 
-if [[ -n "$ROS_DOMAIN" && ! "$ROS_DOMAIN" =~ ^[0-9]+$ ]]; then
-  echo "ROS domain ID must be a non-negative integer." >&2
+if [[ -n "$ROS_DOMAIN" ]]; then
+  if [[ ! "$ROS_DOMAIN" =~ ^[0-9]{1,3}$ ]] || ((10#$ROS_DOMAIN > 232)); then
+    echo "ROS domain ID must be an integer from 0 to 232." >&2
+    exit 2
+  fi
+  ROS_DOMAIN="$((10#$ROS_DOMAIN))"
+fi
+
+if [[ "$CLEAN_BUILD" == "true" && "$BUILD" == "false" ]]; then
+  echo "--clean-build requires rebuilding; remove --no-build." >&2
   exit 2
 fi
 
@@ -377,7 +423,7 @@ exec ros2 launch 41068_ignition_bringup 41068_ignition.launch.py \
   parrot:="$PARROT" \
   parrot2:="$PARROT2" \
   rviz:="$RVIZ" \
-    gui:="$GUI" \
+  gui:="$GUI" \
   nav2:="$NAV2" \
   slam:="$SLAM" \
   "${POSE_ARGS[@]}"

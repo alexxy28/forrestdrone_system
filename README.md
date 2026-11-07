@@ -20,6 +20,21 @@ Everything runs in simulation, on ROS 2 Humble and Ignition Gazebo Fortress.
 
 ## Quick start
 
+On Ubuntu 22.04, you can start with just the launcher. Download it and run setup:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/alexxy28/forrestdrone_system/main/run_simulation.sh
+bash run_simulation.sh --setup
+```
+
+When the project files are missing, the launcher clones the repository over HTTPS
+to `~/git/forrestdrone_system`, then installs dependencies and builds it. Git is
+installed automatically if needed. Setup requires internet access and `sudo`.
+Set `TRACE_INSTALL_DIR` to choose a different, unused destination directory.
+After setup, run `~/git/forrestdrone_system/run_simulation.sh` to launch the menu.
+
+Alternatively, clone the repository yourself:
+
 ```bash
 git clone <this repo> ~/git/forrestdrone_system
 cd ~/git/forrestdrone_system
@@ -65,6 +80,7 @@ Common variations:
 ./run_simulation.sh --trace --pose 6               # casualty on the rock: unreachable test
 ./run_simulation.sh --trace --preload-map          # start from the saved terrain map
 ./run_simulation.sh --trace --no-gui --no-rviz     # lighter: no Gazebo window, no RViz
+./run_simulation.sh --headless                    # no windows; drone starts automatically
 ./run_simulation.sh --trace --no-build             # skip colcon build
 ./run_simulation.sh --trace --second-drone         # two drones race to find the casualty
 ./run_simulation.sh --trace --second-drone --split-search   # two drones, half the area each
