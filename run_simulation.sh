@@ -43,7 +43,7 @@ missing Git is installed automatically using apt-get).
 
 Options:
       --menu            Open the interactive menu
-      --setup           Update from GitHub, install dependencies, and build
+      --setup           Install or update from GitHub, install dependencies, and build
   -w, --world WORLD     World: simple_trees, large_demo, terrain_demo, or demo_2
                         (demo_2 = terrain_demo with pine trees and grass)
       --husky-only      Launch only the Husky
@@ -166,7 +166,7 @@ main_menu() {
 
 TRACE simulation
   1. Configure add-ons and run simulation
-  2. Update from GitHub and install/setup dependencies
+  2. Install or update from GitHub and install/setup dependencies
   0. Exit
 EOF
     read -r -p 'Select an option: ' choice || exit 0
